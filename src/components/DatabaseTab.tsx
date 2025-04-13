@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Download, Upload } from "lucide-react";
 
 const DatabaseTab = () => {
@@ -7,20 +7,20 @@ const DatabaseTab = () => {
   const [fileName, setFileName] = useState<string | null>(null);
 
   const handleExport = async () => {
-    /* const format = document.querySelector('input[name="format"]:checked')?.value;
-
-    if (!format) {
-      setExportStatus('Por favor, selecciona un formato.');
-      return;
-    }
-
     try {
-      const result = await window.electron.database.exportData(format); // Ajusta el nombre de la función exportData
+      const savePath = await window.electron.system.selectSavePath(); // Ajusta el nombre de la función exportData
+
+      if (!savePath) {
+        setExportStatus("No se seleccionó ninguna ruta.");
+        return;
+      }
+      console.log(savePath);
+      const result = await window.electron.database.exportData(savePath); // Llama a la función de exportación
       setExportStatus(result.message);
     } catch (error) {
-      setExportStatus('Error al exportar los datos.');
-      console.error('Error exportando los datos:', error);
-    } */
+      setExportStatus("Error al exportar los datos.");
+      console.error("Error exportando los datos:", error);
+    }
   };
 
   const handleImport = async () => {
@@ -30,7 +30,7 @@ const DatabaseTab = () => {
         setImportStatus("No se seleccionó ningún archivo.");
         return;
       }
-      console.log(filepath);
+      setFileName(filepath);
       const result = await window.electron.database.importData(filepath); // Llama a la función de importación
       setImportStatus(result.message);
     } catch (error) {
@@ -64,7 +64,7 @@ const DatabaseTab = () => {
         </div>
       )}
 
-      <div className="p-4 bg-gray-50 rounded-lg">
+      {/*       <div className="p-4 bg-gray-50 rounded-lg">
         <h3 className="font-medium mb-2">Formato de exportación</h3>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
@@ -87,7 +87,7 @@ const DatabaseTab = () => {
             <span>CSV</span>
           </label>
         </div>
-      </div>
+      </div> */}
 
       {importStatus && (
         <div className="mt-4 text-green-600">

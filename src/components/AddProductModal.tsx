@@ -1,27 +1,19 @@
 import React, { useState, useEffect } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Minus,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
-import { Product, Category, Group, Barcode } from "../types";
+import { ChevronLeft, ChevronRight, Plus, Save, Search } from "lucide-react";
+import { Product, Category, Group, Barcode, Unit } from "../types";
 import AddCategoryModal from "./AddCategoryModal";
 import AddGroupModal from "./AddGroupModal";
 import { Combobox } from "./ui/combobox";
 import ToggleSwitch from "./ui/switch";
+import { formatCurrencyChile } from "../utils/utils";
 
 interface AddProductModalProps {
   isOpen: boolean;
-  onClose: () => void;
   onProductAdded?: () => void; // Callback opcional para cuando se añade un producto
 }
 
 const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
-  onClose,
   onProductAdded,
 }) => {
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
@@ -29,29 +21,23 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [idInput, setIdInput] = useState<string>("1");
   const [barcodeInput, setBarcodeInput] = useState<string>("");
+  const [supplierCodeInput, setSupplierCodeInput] = useState<string>("");
+  const [categoryInput, setCategoryInput] = useState<string>("");
+  const [groupInput, setGroupInput] = useState<string>("");
+  const [unitInput, setUnitInput] = useState<string>("");
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [productBarcodes, setProductBarcodes] = useState<Barcode[]>([]);
-  const [formData, setFormData] = useState<{
-    id: number;
-    name: string;
-    category_id: number | null;
-    group_id: number | null;
-    supplier_code: string | null;
-    price: number;
-    unit: string | null;
-    quick_access: boolean;
-    keyboard_shortcut: string;
-  }>({
+  const [formData, setFormData] = useState<Product>({
     id: 0,
     name: "",
     category_id: 0,
     group_id: 0,
-    supplier_code: "",
     price: 0,
-    unit: "",
+    unit_id: 0,
     quick_access: false,
     keyboard_shortcut: "",
   });
@@ -83,29 +69,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const loadData = async (id?: number) => {
     try {
       setIsLoading(true);
-      const [categoriesData, groupsData, productsData, barcodesData] =
-        await Promise.all([
-          window.electron.database.getCategories(),
-          window.electron.database.getGroups(),
-          window.electron.database.getProducts(),
-          window.electron.database.getBarcodes(),
-        ]);
+      const [
+        categoriesData,
+        groupsData,
+        productsData,
+        barcodesData,
+        unitsData,
+      ] = await Promise.all([
+        window.electron.database.getCategories(),
+        window.electron.database.getGroups(),
+        window.electron.database.getProducts(),
+        window.electron.database.getBarcodes(),
+        window.electron.database.getUnits(),
+      ]);
       setCategories(categoriesData);
       setGroups(groupsData);
       setProducts(productsData);
       setBarcodes(barcodesData);
-      let found;
-      if (id) found = productsData.find((p) => p.id === id);
-      else found = productsData.find((p) => p.id === 1);
-      if (found) {
-        setFormData(found);
-        const productBarcodesData =
-          await window.electron.database.getBarcodeByProductId(found.id);
-        if (productBarcodesData) {
-          setProductBarcodes(productBarcodesData);
-          setBarcodeInput(productBarcodesData[0]?.barcode || "");
-        }
-      }
+      setUnits(unitsData);
+      setPrductData(id ? id : 1); // Cargar el producto por ID o por defecto al primero
     } catch (error) {
       console.error("Error cargando datos:", error);
       window.electron.dialog.showError(
@@ -118,33 +100,70 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, id?: number) => {
+    e!.preventDefault();
 
     try {
       setIsLoading(true);
 
-      console.log("formData", formData);
+      console.table(formData);
 
       const productData: Product = {
         id: formData.id,
         name: formData.name,
         category_id: formData.category_id,
         group_id: formData.group_id ?? null,
-        supplier_code: formData.supplier_code || null,
         price: formData.price || 0,
-        unit: formData.unit || null,
+        unit_id: formData.unit_id || null,
         quick_access: formData.quick_access,
         keyboard_shortcut: formData.keyboard_shortcut || "",
       };
 
-      const found = products.find((p) => p.id === productData.id);
+      console.table(productData);
 
-      if (found) await window.electron.database.updateProduct(productData);
-      else await window.electron.database.addProduct(productData);
+      const foundProductBarcode = productBarcodes.find(
+        (barcode) => barcode.barcode === parseInt(barcodeInput)
+      );
+      const foundIfBarcodeExist = barcodes.find(
+        (barcode) => barcode.barcode === parseInt(barcodeInput)
+      );
+      const foundProductOfExistingBarcode = foundIfBarcodeExist
+        ? await window.electron.database.searchProductsByBarcode(
+            foundIfBarcodeExist.barcode
+          )
+        : "";
+
+      if (id) {
+        if (!foundProductBarcode) {
+          if (foundIfBarcodeExist) {
+            window.electron.dialog.showError(
+              `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`
+            );
+            return;
+          } else {
+            await window.electron.database.addBarcode(
+              productData.id,
+              barcodeInput
+            );
+          }
+        }
+        const found = products.find((p) => p.id === id);
+        if (found) await window.electron.database.updateProduct(productData);
+      } else {
+        productData.id = products.length + 1; // Asignar un nuevo ID
+        if (foundIfBarcodeExist) {
+          window.electron.dialog.showError(
+            `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`
+          );
+          return;
+        }
+        await window.electron.database.addProduct(productData);
+        await window.electron.database.addBarcode(productData.id, barcodeInput);
+      }
 
       // Notificación de éxito
-      window.electron.dialog.showSuccess("Producto guardado correctamente");
+      const action = id ? "actualizado" : "agregado";
+      window.electron.dialog.showSuccess(`Producto ${action} correctamente`);
 
       // Notificar que se añadió un producto (para actualizar listas, etc.)
       if (onProductAdded) {
@@ -163,53 +182,77 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   const handleIdChange = async (data: string) => {
-    const currentIndex = products.findIndex((p) => p.id === formData.id);
-    setProductBarcodes([]); // Limpiar el estado de los códigos de barras al cambiar de producto
+    const currentIndex = products.findIndex((p) => p.id === parseInt(data));
+    setProductBarcodes([]); // Limpiar los códigos de barras al cambiar de producto
+    let newProductId: number;
 
-    if (currentIndex === -1) return; // Por seguridad
-
-    // Al cambiar entre productos con "+" o "-", no se necesita modificar el input
-    let newProductId;
-    let newProduct;
-    if (data === "-") {
-      const prevIndex =
-        currentIndex === 0 || currentIndex === -1
-          ? products.length - 1
-          : currentIndex - 1;
-      newProduct = products[prevIndex];
-      newProductId = products[prevIndex].id.toString();
-    } else if (data === "+") {
-      const nextIndex =
-        currentIndex === products.length - 1 || currentIndex === -1
-          ? 0
-          : currentIndex + 1;
-      newProduct = products[nextIndex];
-      newProductId = products[nextIndex].id.toString();
-    } else if (data) {
-      // Si el valor es un número válido, lo aplicamos al `formData`
-      const parsedId = parseInt(data);
-      const found = products.find((p) => p.id === parsedId);
-      if (found) {
-        newProduct = found;
-        newProductId = parsedId.toString();
-      } else {
-        newProductId = (products.length - 1).toString();
-        newProduct = products[products.length - 1];
-        window.electron.dialog.showError(
-          "No se encontró ningún producto con ese Código."
-        );
+    if (currentIndex === -1) {
+      if (data == "") {
+        return;
       }
+      if (parseInt(data) == products.length + 1) {
+        newProductId = 1;
+      } else if (parseInt(data) == 0) {
+        newProductId = products.length;
+      } else {
+        window.electron.dialog.showError(
+          "No se encontró ningún producto con ese ID."
+        );
+        return;
+      }
+    } // Por seguridad
+    else {
+      newProductId = currentIndex + 1;
     }
-    if (newProduct && newProductId) {
-      setFormData(newProduct);
-      setIdInput(newProductId); // Actualizamos el input con el nuevo ID
+    setPrductData(newProductId);
+  };
+
+  const setPrductData = async (id: number) => {
+    const productsList = await window.electron.database.getProducts();
+    const categoriesList = await window.electron.database.getCategories();
+    const groupsList = await window.electron.database.getGroups();
+    const unitsList = await window.electron.database.getUnits();
+    const newProduct = productsList.find((p) => p.id === id);
+    if (newProduct) {
       const productBarcodesData =
         await window.electron.database.getBarcodeByProductId(newProduct.id);
       if (productBarcodesData) {
         setProductBarcodes(productBarcodesData);
         setBarcodeInput(productBarcodesData[0]?.barcode || "");
       }
+      const foundCategory = categoriesList.find(
+        (category) => category.id === newProduct.category_id
+      );
+      const foundGroup = groupsList.find(
+        (group) => group.id === newProduct.group_id
+      );
+      const foundUnit = unitsList.find(
+        (unit) => unit.id === newProduct.unit_id
+      );
+      if (foundCategory) setCategoryInput(foundCategory.name);
+      else setCategoryInput("");
+      if (foundGroup) setGroupInput(foundGroup.name);
+      else setGroupInput("");
+      if (foundUnit) setUnitInput(foundUnit.unit);
+      else setUnitInput("");
+      setFormData(newProduct);
+      setIdInput(newProduct.id.toString()); // Actualizamos el input con el nuevo ID
     }
+  };
+
+  const updateIdInput = (delta: number) => {
+    const newValue = (parseInt(idInput) + delta).toString();
+    setIdInput(newValue);
+
+    // Simulamos el evento que espera handleChange
+    const fakeEvent = {
+      target: {
+        name: "id",
+        value: newValue,
+      },
+    } as React.ChangeEvent<HTMLInputElement>;
+
+    handleChange(fakeEvent);
   };
 
   const handleCheckboxChange = () => {
@@ -228,17 +271,40 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     //console.log("value", value);
     //console.log("name", name);
     //console.log("type", type);
-    if (value == "") {
+    /*   if (value == "") {
       setFormData((prev) => ({
         ...prev,
         [name]: null,
       }));
+      return;
+    } */
+    if (name == "id") {
+      setIdInput(value);
+      handleIdChange(value);
       return;
     }
     if (name == "barcode") {
       setBarcodeInput(value);
       return;
     }
+    if (name == "category_id") {
+      setCategoryInput(value);
+    }
+    if (name == "group_id") {
+      setGroupInput(value);
+      const foundGroup = groups.find((group) => group.id === parseInt(value));
+      if (foundGroup) {
+        setFormData((prev) => ({
+          ...prev,
+          price: foundGroup.price,
+        }));
+      }
+    }
+    if (name == "unit_id") {
+      setUnitInput(value);
+    }
+
+    console.log(value);
 
     setFormData((prev) => ({
       ...prev,
@@ -288,7 +354,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       parseInt(barcodeInput)
     );
     if (newProduct.length) {
-      console.log("newProduct", newProduct);
       setFormData(newProduct[0]);
       setIdInput(newProduct[0].id.toString());
       const productBarcodesData =
@@ -311,15 +376,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           <h2 className="text-2xl font-semibold text-gray-800">
             Agregar Producto
           </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700">
-            <X size={24} />
-          </button>
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(e: React.FormEvent) => handleSubmit(e, formData.id)}
           className="space-y-4"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -334,22 +394,22 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => handleIdChange("-")}
+                  onClick={() => updateIdInput(-1)}
                   className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
                   <ChevronLeft size={20} />
                 </button>
                 <input
                   type="text"
-                  name="name"
+                  name="id"
                   value={idInput} // Aquí usamos `idInput` en lugar de `formData.id`
-                  onChange={(event) => setIdInput(event.target.value)} // Actualizamos el valor de `idInput`
+                  onChange={handleChange} // Actualizamos el valor de `idInput`
                   onBlur={() => handleIdChange(idInput)} // Confirmar cambio cuando el campo pierde el foco (puedes usar "onChange" para más interactividad)
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
                 />
 
                 <button
                   type="button"
-                  onClick={() => handleIdChange("+")}
+                  onClick={() => updateIdInput(1)}
                   className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
                   <ChevronRight size={20} />
                 </button>
@@ -376,21 +436,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 Categoría
               </label>
               <div className="flex gap-2">
-                {/*                 <select
-                  name="category_id"
-                  value={formData.category_id?.toString()}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]">
-                  <option value="">Seleccionar categoría</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select> */}
                 <Combobox
                   name="category_id"
-                  value={formData.category_id?.toString() ?? ""}
+                  value={categoryInput}
                   onChange={handleChange}
                   options={categories.map((category) => ({
                     id: category.id,
@@ -412,21 +460,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 Grupo
               </label>
               <div className="flex gap-2">
-                {/* <select
-                  name="group_id"
-                  value={formData.group_id?.toString() ?? ""}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]">
-                  <option value="">Seleccionar grupo</option>
-                  {groups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select> */}
                 <Combobox
                   name="group_id"
-                  value={formData.group_id?.toString() ?? ""}
+                  value={groupInput}
                   onChange={handleChange}
                   options={groups.map((group) => ({
                     id: group.id,
@@ -473,8 +509,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               </label>
               <div className="flex gap-2">
                 <Combobox
-                  name="grup_id"
-                  value={formData.group_id?.toString() ?? ""}
+                  name="suplier_code"
+                  value={supplierCodeInput}
                   onChange={handleChange}
                   options={groups.map((group) => ({
                     id: group.id,
@@ -512,15 +548,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Unidad de medida
               </label>
-              <input
-                type="text"
-                name="unit"
-                value={formData.unit?.toString() ?? ""}
+              <Combobox
+                name="unit_id"
+                value={unitInput}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                options={units.map((unit) => ({
+                  id: unit.id,
+                  value: unit.unit,
+                }))}
               />
             </div>
-
             <div className="flex items-center gap-2">
               <ToggleSwitch
                 checked={formData.quick_access}
@@ -550,15 +587,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              onClick={handleSubmit}
+              className="border border-gray-300 mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
               disabled={isLoading}>
-              Cancelar
+              <Plus size={20} /> Agregar Nuevo
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557] disabled:bg-gray-400"
+              className=" bg-[#007566] text-white hover:bg-[#006557] disabled:bg-gray-400 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
               disabled={isLoading}>
+              <Save size={20} />
               {isLoading ? "Guardando..." : "Guardar Producto"}
             </button>
           </div>

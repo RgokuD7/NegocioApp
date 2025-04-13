@@ -13,41 +13,44 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
   onGroupAdded,
 }) => {
   const [groupName, setGroupName] = useState("");
+  const [price, setPrice] = useState("");
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-  
-      if (!groupName) {
-        alert('Por favor, ingresa un nombre para el grupo');
-        return;
+    e.preventDefault();
+
+    if (!groupName) {
+      alert("Por favor, ingresa un nombre para el grupo");
+      return;
+    }
+
+    try {
+      const category: string = groupName.trim();
+      const priceValue: number = parseInt(price);
+
+      await window.electron.database.addGroup(category, priceValue);
+
+      // Notificación de éxito
+      window.electron.dialog.showSuccess("Grupo guardada correctamente");
+
+      // Reset form
+      setGroupName("");
+      setPrice("");
+
+      // Notificar que se añadió un producto (para actualizar listas, etc.)
+      if (onGroupAdded) {
+        onGroupAdded();
       }
-  
-      try {
-        const category: string = groupName.trim();
-  
-        await window.electron.database.addGroup(category);
-  
-        // Notificación de éxito
-        window.electron.dialog.showSuccess("Grupo guardada correctamente");
-  
-        // Reset form
-        setGroupName("");
-  
-        // Notificar que se añadió un producto (para actualizar listas, etc.)
-        if (onGroupAdded) {
-          onGroupAdded();
-        }
-  
-        onClose();
-      } catch (error: any) {
-        console.error("Error guardando grupo:", error);
-        window.electron.dialog.showError(
-          error.message || "Error al guardar grupo"
-        );
-      }
-    };
+
+      onClose();
+    } catch (error: any) {
+      console.error("Error guardando grupo:", error);
+      window.electron.dialog.showError(
+        error.message || "Error al guardar grupo"
+      );
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -62,17 +65,31 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre del Grupo
-            </label>
-            <input
-              type="text"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-              placeholder="Ingrese el nombre del grupo"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre del Grupo
+              </label>
+              <input
+                type="text"
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                placeholder="Nombre del grupo"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Precio
+              </label>
+              <input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                placeholder="Precio del grupo"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3">

@@ -46,7 +46,7 @@
     "typescript-eslint": "^8.3.0",
     "vite": "^6.2.5"
   },
-  "build": {
+ "build": {
     "appId": "com.negocioapp.desktop",
     "productName": "NegocioApp",
     "files": [
@@ -59,7 +59,13 @@
     },
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "assets/icon.png" 
+    },
+    "mac": {
+      "icon": "assets/icon.icns"  
+    },
+    "linux": {
+      "icon": "assets/icon.png" 
     }
   }
 }
