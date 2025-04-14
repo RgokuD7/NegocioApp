@@ -24,25 +24,25 @@ export function registerIpcHandlers(ipcMain, db) {
     }
   });
 
-    // Función para importar datos desde un archivo SQL
-    function importFromSQL(filePath, db) {
-      try {
-        const sql = fs.readFileSync(filePath, "utf-8"); // Leer archivo SQL como texto
-        db.exec(sql, (err) => {
-          if (err) {
-            throw new Error(`Error ejecutando el SQL: ${err.message}`);
-          }
-        });
-  
-        return {
-          success: true,
-          message: "Datos importados correctamente desde el archivo SQL.",
-        };
-      } catch (error) {
-        console.error("Error importing data from SQL:", error);
-        throw new Error(`Error al importar datos desde SQL: ${error.message}`);
-      }
+  // Función para importar datos desde un archivo SQL
+  function importFromSQL(filePath, db) {
+    try {
+      const sql = fs.readFileSync(filePath, "utf-8"); // Leer archivo SQL como texto
+      db.exec(sql, (err) => {
+        if (err) {
+          throw new Error(`Error ejecutando el SQL: ${err.message}`);
+        }
+      });
+
+      return {
+        success: true,
+        message: "Datos importados correctamente desde el archivo SQL.",
+      };
+    } catch (error) {
+      console.error("Error importing data from SQL:", error);
+      throw new Error(`Error al importar datos desde SQL: ${error.message}`);
     }
+  }
 
   // Manejador para exportar datos
   ipcMain.handle("export-data", async (_, savePath) => {
@@ -51,18 +51,18 @@ export function registerIpcHandlers(ipcMain, db) {
       if (!savePath || !dbPath) {
         throw new Error("Ruta de guardado o base de datos no proporcionada.");
       }
-  
+
       // Leer la base de datos como archivo binario
       const databaseBuffer = fs.readFileSync(dbPath);
 
       const sql_path = savePath + ".sql";
       const sqlite_path = savePath + ".sqlite";
-  
+
       // Guardar ese contenido en la ruta seleccionada
       fs.writeFileSync(sqlite_path, databaseBuffer);
 
       exportToSQL(sql_path, dbPath);
-  
+
       return { success: true, message: "Base de datos exportada con éxito." };
     } catch (error) {
       console.error("Error al exportar base de datos:", error);
@@ -103,9 +103,9 @@ export function registerIpcHandlers(ipcMain, db) {
   // Seleccionar la ruta para guardar un archivo
   ipcMain.handle("select-save-path", async (_) => {
     const filters = {
-      sql: { name: "Archivos SQL", extensions: ["sql"] },/* 
+      sql: { name: "Archivos SQL", extensions: ["sql"] } /* 
       excel: { name: "Archivos Excel", extensions: ["xlsx"] },
-      csv: { name: "Archivos CSV", extensions: ["csv"] }, */
+      csv: { name: "Archivos CSV", extensions: ["csv"] }, */,
     };
 
     const result = await dialog.showSaveDialog({
@@ -170,7 +170,7 @@ export function registerIpcHandlers(ipcMain, db) {
         `Error al importar productos desde CSV: ${error.message}`
       );
     }
-  }  
+  }
 
   // Manejadores para categorías
   ipcMain.handle("get-categories", async () => {
@@ -774,7 +774,7 @@ export function registerIpcHandlers(ipcMain, db) {
       if (result.changes === 0) {
         throw new Error("Venta no encontrada");
       }
-      return { success: true, id };
+      return { success: true };
     } catch (error) {
       console.error("Error deleting sale:", error);
       throw new Error(`Error al eliminar venta: ${error.message}`);
@@ -845,7 +845,7 @@ export function registerIpcHandlers(ipcMain, db) {
       if (result.changes === 0) {
         throw new Error("Artículo de venta no encontrado");
       }
-      return { success: true, id };
+      return { success: true };
     } catch (error) {
       console.error("Error deleting sale item:", error);
       throw new Error(`Error al eliminar artículo de venta: ${error.message}`);

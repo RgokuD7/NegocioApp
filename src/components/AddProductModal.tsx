@@ -43,9 +43,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   });
 
   useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
+    loadData();
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toUpperCase();
       if (key.startsWith("F") && !isNaN(Number(key.slice(1)))) {
@@ -64,7 +65,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, []);
 
   const loadData = async (id?: number) => {
     try {
@@ -87,7 +88,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setProducts(productsData);
       setBarcodes(barcodesData);
       setUnits(unitsData);
-      setPrductData(id ? id : 1); // Cargar el producto por ID o por defecto al primero
+      setProductData(id ? id : 1); // Cargar el producto por ID o por defecto al primero
     } catch (error) {
       console.error("Error cargando datos:", error);
       window.electron.dialog.showError(
@@ -195,19 +196,19 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       } else if (parseInt(data) == 0) {
         newProductId = products.length;
       } else {
+        newProductId = products.length;
         window.electron.dialog.showError(
           "No se encontró ningún producto con ese ID."
         );
-        return;
       }
     } // Por seguridad
     else {
       newProductId = currentIndex + 1;
     }
-    setPrductData(newProductId);
+    setProductData(newProductId);
   };
 
-  const setPrductData = async (id: number) => {
+  const setProductData = async (id: number) => {
     const productsList = await window.electron.database.getProducts();
     const categoriesList = await window.electron.database.getCategories();
     const groupsList = await window.electron.database.getGroups();
@@ -278,11 +279,17 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }));
       return;
     } */
-    if (name == "id") {
-      setIdInput(value);
-      handleIdChange(value);
+    if (name === "id") {
+      const numericValue = value.replace(/\D/g, ""); // elimina todo lo que no sea dígito (0-9)
+      setIdInput(numericValue);
+      handleIdChange(numericValue);
+      if (parseInt(value) > products.length + 1) {
+        setIdInput(products.length.toString());
+        handleIdChange(products.length.toString());
+      }
       return;
     }
+
     if (name == "barcode") {
       setBarcodeInput(value);
       return;
@@ -370,7 +377,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   return (
-    <div className="w-full rounded-lg bg-white bg-opacity-50 flex items-center justify-center">
+    <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
       <div className=" bg-white rounded-lg w-full p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800">
@@ -399,7 +406,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   <ChevronLeft size={20} />
                 </button>
                 <input
-                  type="text"
+                  type="number"
                   name="id"
                   value={idInput} // Aquí usamos `idInput` en lugar de `formData.id`
                   onChange={handleChange} // Actualizamos el valor de `idInput`

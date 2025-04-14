@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import {
+  Barcode,
   ChevronDown,
   ChevronUp,
   Database,
@@ -13,10 +14,10 @@ import DatabaseTab from "./components/DatabaseTab";
 import { Product } from "./types";
 import { formatCurrencyChile } from "./utils/utils";
 import SalesCart from "./components/SalesCart";
+import Barcodes from "./components/Barcodes";
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isQuickAccessVisible, setIsQuickAccessVisible] = useState(true); // Controla la visibilidad de los accesos rápidos
   const [selectedSection, setSelectedSection] = useState(""); // Estado para la sección seleccionada
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
@@ -45,6 +46,9 @@ function App() {
     case "products":
       content = <AddProductModal isOpen={true} onProductAdded={loadData} />;
       break;
+    case "barcodes":
+      content = <Barcodes isOpen={true} />;
+      break;
     case "bd":
       content = <DatabaseTab />;
       break;
@@ -58,7 +62,7 @@ function App() {
       {/* Left Section - 1/3 width */}
       <div className="w-1/3 bg-[#007566] p-6 flex flex-col">
         {/* Quick Access buttons */}
-        {!isMenuOpen && isQuickAccessVisible && (
+        {!isMenuOpen && (
           <div className="grid grid-cols-2 gap-3 mt-4">
             {quickAccessProducts.map((product) => (
               <button
@@ -74,13 +78,19 @@ function App() {
         )}
 
         {/* Menú desplegable con opciones */}
-        {isMenuOpen && !isQuickAccessVisible && (
+        {isMenuOpen && (
           <div className="grid grid-cols-1 gap-3 mt-4">
             <button
               onClick={() => setSelectedSection("products")}
               className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
               <PackageSearch size={24} className="mb-1" />
               <span className="font-medium">Productos</span>
+            </button>
+            <button
+              onClick={() => setSelectedSection("barcodes")}
+              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+              <Barcode size={24} className="mb-1" />
+              <span className="font-medium">Códigos De Barra</span>
             </button>
             <button
               onClick={() => setSelectedSection("bd")}
@@ -95,7 +105,6 @@ function App() {
         <button
           onClick={() => {
             setIsMenuOpen(!isMenuOpen); // Cambia el estado de visibilidad del menú
-            setIsQuickAccessVisible(!isQuickAccessVisible); // Oculta los accesos rápidos cuando se abre el menú
           }}
           className="mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag">
           {isMenuOpen ? (
@@ -109,21 +118,16 @@ function App() {
 
       {/* Right Section - 2/3 width */}
 
-      {!isMenuOpen && isQuickAccessVisible && (
+      {!isMenuOpen && (
         <SalesCart
           onOpenAddProducts={() => {
-            setIsQuickAccessVisible(false);
             setIsMenuOpen(true);
             setSelectedSection("products");
           }}
         />
       )}
 
-      {isMenuOpen && !isQuickAccessVisible && (
-        <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-center">
-          {content}
-        </div>
-      )}
+      {isMenuOpen && content}
 
       {/* Modals */}
 

@@ -16,6 +16,8 @@ declare global {
         getBarcodes: () => Promise<Barcode[]>; // Obtiene todos los códigos de barras
         getBarcodeByProductId: (productId: number) => Promise<Barcode[]>; // Obtiene los códigos de barras por ID de producto
         addBarcode: (productId: number, barcode: string) => Promise<void>; // Añade un código de barras a un producto
+        updateBarcode: (barcode: Barcode) => Promise<Barcode>; //Actualizar código de barras
+        deleteBarcode: (id: number) => Promise<{ success: boolean }>; //Eliminar código de barras
 
         // ========================================================
         // Funciones relacionadas con Proveedores (Suppliers)
@@ -23,18 +25,35 @@ declare global {
         getSuppliers: () => Promise<Supplier[]>; // Obtiene todos los proveedores
         getSupplierById: (supplierId: number) => Promise<Supplier>; // Obtiene un proveedor por su ID
         addSupplier: (rut: string, name: string) => Promise<Supplier>; // Añade un nuevo proveedor
-        updateSupplier: (id: number, rut: string, name: string) => Promise<Supplier>; // Actualiza un proveedor
-        deleteSupplier: (supplierId: number) => Promise<void>; // Elimina un proveedor
+        updateSupplier: (
+          id: number,
+          rut: string,
+          name: string
+        ) => Promise<Supplier>; // Actualiza un proveedor
+        deleteSupplier: (supplierId: number) => Promise<{ success: boolean }>; // Elimina un proveedor
 
         // ========================================================
         // Funciones relacionadas con Códigos de Proveedores (Supplier Codes)
         // ========================================================
         getSupplierCodes: () => Promise<SupplierCode[]>; // Obtiene todos los códigos de proveedores
-        getSupplierCodesByProductId: (productId: number) => Promise<SupplierCode[]>; // Obtiene códigos de proveedores por ID de producto
-        getSupplierCodesBySupplierId: (supplierId: number) => Promise<SupplierCode[]>; // Obtiene códigos de proveedores por ID de proveedor
-        addSupplierCode: (supplierId: number, productId: number, code: string) => Promise<void>; // Añade un código de proveedor
-        updateSupplierCode: (id: number, supplierId: number, productId: number, code: string) => Promise<void>; // Actualiza un código de proveedor
-        deleteSupplierCode: (id: number) => Promise<void>; // Elimina un código de proveedor
+        getSupplierCodesByProductId: (
+          productId: number
+        ) => Promise<SupplierCode[]>; // Obtiene códigos de proveedores por ID de producto
+        getSupplierCodesBySupplierId: (
+          supplierId: number
+        ) => Promise<SupplierCode[]>; // Obtiene códigos de proveedores por ID de proveedor
+        addSupplierCode: (
+          supplierId: number,
+          productId: number,
+          code: string
+        ) => Promise<void>; // Añade un código de proveedor
+        updateSupplierCode: (
+          id: number,
+          supplierId: number,
+          productId: number,
+          code: string
+        ) => Promise<void>; // Actualiza un código de proveedor
+        deleteSupplierCode: (id: number) => Promise<{ success: boolean }>; // Elimina un código de proveedor
 
         // ========================================================
         // Funciones relacionadas con Productos (Products)
@@ -52,7 +71,8 @@ declare global {
         searchProducts: (query: string) => Promise<Product[]>; // Busca productos por nombre, código, etc.
         searchProductsByBarcode: (barcode: number) => Promise<Product[]>; // Busca productos por código de barras
         searchProductBySupplierCode: (code: string) => Promise<Product[]>; // Busca productos por código de proveedor
-        deleteProduct: (id: number) => Promise<void>; // Elimina un producto
+        deleteProduct: (id: number) => Promise<{ success: boolean }>;
+        // Elimina un producto
 
         // ========================================================
         // Funciones relacionadas con unidades (Units)
@@ -60,7 +80,7 @@ declare global {
         getUnits: () => Promise<Unit[]>; // Obtiene todas las unidades
         addUnit: (unit: string) => Promise<Unit>; // Añade una nueva unidad
         updateUnit: (id: number, unit: string) => Promise<Unit>; // Actualiza una unidad existente
-        deleteUnit: (id: number) => Promise<void>; // Elimina una unidad
+        deleteUnit: (id: number) => Promise<{ success: boolean }>; // Elimina una unidad
         // ========================================================
         // Funciones relacionadas con Ventas (Sales)
         // ========================================================
@@ -74,10 +94,16 @@ declare global {
         // Funciones detalladas de Ventas (Sales)
         // ========================================================
         getSaleDetailsBySaleId: (saleId: number) => Promise<SaleItem[]>; // Obtiene los detalles de una venta por su ID
-        addSaleItem: (saleId: number, productId: number, quantity: number) => Promise<SaleItem>; // Añade un artículo a una venta
-        updateSaleItem: (saleItemId: number, quantity: number) => Promise<SaleItem>; // Actualiza un artículo de una venta
+        addSaleItem: (
+          saleId: number,
+          productId: number,
+          quantity: number
+        ) => Promise<SaleItem>; // Añade un artículo a una venta
+        updateSaleItem: (
+          saleItemId: number,
+          quantity: number
+        ) => Promise<SaleItem>; // Actualiza un artículo de una venta
         deleteSaleItem: (saleItemId: number) => Promise<void>; // Elimina un artículo de una venta
-
       };
 
       // Diálogos (ventanas emergentes)

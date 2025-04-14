@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.invoke("add-barcode", productId, barcode), // Añadir un código de barras para un producto
     updateBarcode: (id, productId, barcode) =>
       ipcRenderer.invoke("update-barcode", id, productId, barcode), // Actualizar un código de barras
-
+    deleteBarcode: (id) => ipcRenderer.invoke("delete-barcode", id),
     // Manejadores para proveedores
     getSuppliers: () => ipcRenderer.invoke("get-suppliers"), // Obtener todos los proveedores
     getSupplierById: (supplierId) =>
@@ -106,7 +106,6 @@ contextBridge.exposeInMainWorld("electron", {
   system: {
     getAppVersion: () => ipcRenderer.invoke("get-app-version"), // Obtener la versión de la aplicación
     selectFile: () => ipcRenderer.invoke("select-file"), // Abrir un cuadro de diálogo para seleccionar un archivo
-    selectSavePath: () =>
-      ipcRenderer.invoke("select-save-path"), // Abrir un cuadro de diálogo para guardar un archivo
+    selectSavePath: () => ipcRenderer.invoke("select-save-path"), // Abrir un cuadro de diálogo para guardar un archivo
   },
 });

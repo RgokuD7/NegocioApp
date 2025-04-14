@@ -40,7 +40,7 @@ const DatabaseTab = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-end">
       <div className="grid gap-4">
         <button
           onClick={handleExport}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Product } from "../types";
 import { formatCurrencyChile } from "../utils/utils";
 
