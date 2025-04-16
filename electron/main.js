@@ -5,6 +5,7 @@ import { initializeDatabase } from "./database.js";
 import { registerIpcHandlers } from "./ipcHandlers.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { WebSocketServer } from "ws"; // Asegúrate de importar WebSocketServer si no lo tienes ya
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,45 +14,28 @@ const __dirname = dirname(__filename);
 let mainWindow = null;
 let db = null;
 
-// Función para crear la ventana principal
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     icon: path.join(__dirname, "../assets/icon.png"),
     webPreferences: {
-      // Configuración más segura
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
   });
 
-  // Eliminar la barra de menú
-  Menu.setApplicationMenu(null);
-
-  // Cargar la URL correspondiente según el entorno
   mainWindow.loadURL(
     isDev
       ? "http://localhost:5173"
       : `file://${path.join(__dirname, "../dist/index.html")}`
   );
 
-  // Mostrar la ventana cuando esté lista
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
-    // Comprobar actualizaciones en producción
-    if (!isDev) {
-      checkForUpdates();
-    }
   });
 
-  // Abrir DevTools automáticamente en desarrollo
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
-
-  // Manejar el cierre de la ventana
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -104,23 +88,5 @@ app.on("quit", () => {
     }
   } catch (error) {
     console.error("Error closing database:", error);
-  }
-});
-
-// Función para verificar actualizaciones (implementar según necesidades)
-function checkForUpdates() {
-  // Implementar lógica de verificación de actualizaciones
-  console.log("Checking for updates...");
-}
-
-// Manejador para errores no capturados
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught exception:", error);
-
-  if (mainWindow) {
-    dialog.showErrorBox(
-      "Error en la aplicación",
-      `Ha ocurrido un error inesperado: ${error.message}`
-    );
   }
 });

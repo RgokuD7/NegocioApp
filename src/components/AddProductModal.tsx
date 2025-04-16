@@ -6,6 +6,7 @@ import AddGroupModal from "./AddGroupModal";
 import { Combobox } from "./ui/combobox";
 import ToggleSwitch from "./ui/switch";
 import { formatCurrencyChile } from "../utils/utils";
+import AlertModal from "./alertModal";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -41,6 +42,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     quick_access: false,
     keyboard_shortcut: "",
   });
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    type: "error" | "success";
+    message: string;
+  }>({ show: false, type: "success", message: "" });
 
   useEffect(() => {
     loadData();
@@ -164,7 +170,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
       // Notificación de éxito
       const action = id ? "actualizado" : "agregado";
-      window.electron.dialog.showSuccess(`Producto ${action} correctamente`);
+      const message = `Producto ${action} correctamente`;
+      //window.electron.dialog.showSuccess(`Producto ${action} correctamente`);
+      setAlert({
+        show: true,
+        type: "success",
+        message: message,
+      });
 
       // Notificar que se añadió un producto (para actualizar listas, etc.)
       if (onProductAdded) {
@@ -174,9 +186,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     } catch (error: any) {
       console.error("Error guardando producto:", error);
-      window.electron.dialog.showError(
+      /* window.electron.dialog.showError(
         error.message || "Error al guardar el producto"
-      );
+      ); */
+      setAlert({
+        show: true,
+        type: "error",
+        message: "Error guardando producto",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -197,9 +214,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         newProductId = products.length;
       } else {
         newProductId = products.length;
-        window.electron.dialog.showError(
+        /* window.electron.dialog.showError(
           "No se encontró ningún producto con ese ID."
-        );
+        ); */
+        setAlert({
+          show: true,
+          type: "error",
+          message: "No se encontró ningún producto con ese ID",
+        });
       }
     } // Por seguridad
     else {
@@ -620,6 +642,15 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         onClose={() => setIsAddGroupModalOpen(false)}
         onGroupAdded={loadData}
       />
+      {alert.show && (
+        <AlertModal
+          alertType={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ ...alert, show: false })}
+          autoClose={false}
+          duration={alert.type === "success" ? 3000 : 5000}
+        />
+      )}
     </div>
   );
 };

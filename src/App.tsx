@@ -53,7 +53,11 @@ function App() {
       content = <DatabaseTab />;
       break;
     default:
-      content = <p>Seleccione una opción.</p>;
+      content = (
+        <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
+          <p>Seleccione una opción.</p>
+        </div>
+      );
       break;
   }
 
@@ -81,6 +85,7 @@ function App() {
         {isMenuOpen && (
           <div className="grid grid-cols-1 gap-3 mt-4">
             <button
+              id="products"
               onClick={() => setSelectedSection("products")}
               className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
               <PackageSearch size={24} className="mb-1" />
@@ -103,6 +108,7 @@ function App() {
         )}
 
         <button
+          id="menu"
           onClick={() => {
             setIsMenuOpen(!isMenuOpen); // Cambia el estado de visibilidad del menú
           }}

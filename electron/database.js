@@ -1,10 +1,20 @@
 import path from "path";
 import { app } from "electron";
 import sqlite3 from "better-sqlite3";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Ruta a la base de datos
-const dbPath = path.join(app.getPath("userData"), "database.sqlite");
-
+//const dbPath = path.join(app.getPath("userData"), "database.sqlite");
+// Ruta DINÁMICA para la base de datos
+function getDbPath() {
+  if (process.env.NODE_ENV === 'test') {
+    return path.join(__dirname, '../tests/test-database.sqlite'); // Ruta para pruebas
+  }
+  return path.join(app.getPath("userData"), "database.sqlite"); // Ruta producción
+}
 // Inicializar y preparar la base de datos
 export async function initializeDatabase() {
   try {
@@ -13,6 +23,8 @@ export async function initializeDatabase() {
       verbose: console.log,
       fileMustExist: false,
     };
+
+    const dbPath = getDbPath();
 
     // Inicializar conexión
     const db = new sqlite3(dbPath, options);
