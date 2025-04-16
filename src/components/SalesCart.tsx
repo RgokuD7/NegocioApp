@@ -29,11 +29,26 @@ const SalesCart: React.FC<SalesCartProps> = ({
     { product: Product; quantity: number }[]
   >([]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const formRef = useRef<HTMLFormElement>(null);
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Verificación exhaustiva de null
+      if (inputRef.current instanceof HTMLInputElement) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     console.log(shorcutData);
     if (typeof shorcutData === "string" && shorcutData.trim() !== "") {
@@ -68,6 +83,8 @@ const SalesCart: React.FC<SalesCartProps> = ({
         setProcessedQuery(trimmedQuery); // usamos el query tal cual si no hay x
       }
     }
+
+    if (inputRef.current) inputRef.current.focus();
   }, [searchQuery]);
 
   useEffect(() => {
@@ -76,6 +93,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
       0
     );
     setTotalSale(total);
+    if (inputRef.current) inputRef.current.focus();
   }, [selectedProducts]);
 
   const loadData = async () => {
@@ -94,6 +112,8 @@ const SalesCart: React.FC<SalesCartProps> = ({
         "Error al cargar las categorías y grupos"
       );
     }
+
+    if (inputRef.current) inputRef.current.focus();
   };
 
   const filteredProducts = products.filter((p) =>
@@ -269,6 +289,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
         />
         <form onSubmit={handleSearch} className="mt-4 relative" ref={formRef}>
           <input
+            ref={inputRef}
             type="text"
             placeholder="Buscar por nombre o código..."
             value={searchQuery}
