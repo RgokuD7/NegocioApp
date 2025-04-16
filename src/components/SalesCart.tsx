@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Minus, Plus, Search, Trash } from "lucide-react";
 import SearchResultsModal from "./SearchResultsModal";
 import { Product, Unit, Barcode } from "../types";
@@ -7,8 +7,14 @@ import ProductNotFoundModal from "./ProductNotFoundModal";
 
 interface SalesCartProps {
   onOpenAddProducts?: () => void;
+  onShortcutAdded: () => void;
+  shorcutData: string;
 }
-const SalesCart: React.FC<SalesCartProps> = ({ onOpenAddProducts }) => {
+const SalesCart: React.FC<SalesCartProps> = ({
+  onOpenAddProducts,
+  onShortcutAdded,
+  shorcutData,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [processedQuery, setProcessedQuery] = useState("");
   const [isSearchResultsOpen, setIsSearchResultsOpen] = useState(false);
@@ -26,6 +32,43 @@ const SalesCart: React.FC<SalesCartProps> = ({ onOpenAddProducts }) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    console.log(shorcutData);
+    if (typeof shorcutData === "string" && shorcutData.trim() !== "") {
+      setSearchQuery((prev) => `${prev}${shorcutData}`);
+      if (onShortcutAdded) onShortcutAdded();
+      setTimeout(() => {
+        const form = document.querySelector("form") as HTMLFormElement;
+        if (form) {
+          const submitEvent = new Event("submit", {
+            bubbles: true,
+            cancelable: true,
+          });
+          form.dispatchEvent(submitEvent);
+        }
+      }, 50);
+    }
+  }, [shorcutData]);
+
+  useEffect(() => {
+    if (searchQuery) {
+      const trimmedQuery = searchQuery.toLowerCase().trim();
+      const match = trimmedQuery.match(/^(\d+(?:[.,]\d+)?)\s*[*]\s*(.+)/);
+
+      if (match) {
+        const quantity = parseFloat(match[1].replace(",", "."));
+        const productName = match[2];
+
+        setQuantityInput(quantity);
+        setProcessedQuery(productName); // este es un nuevo estado limpio sin el "3x"
+      } else {
+        setQuantityInput(1);
+        setProcessedQuery(trimmedQuery); // usamos el query tal cual si no hay x
+      }
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     const total = selectedProducts.reduce(
@@ -58,7 +101,7 @@ const SalesCart: React.FC<SalesCartProps> = ({ onOpenAddProducts }) => {
   );
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery) {
+    if (processedQuery) {
       // Buscar coincidencia con codigos de barra
       const matchedBarcode = barcodes.find(
         (b) => b.barcode === parseInt(processedQuery)
@@ -86,36 +129,22 @@ const SalesCart: React.FC<SalesCartProps> = ({ onOpenAddProducts }) => {
       }
       setSearchQuery("");
       setQuantityInput(1);
+      if (onShortcutAdded) onShortcutAdded();
     }
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-    const trimmedQuery = query.toLowerCase().trim();
-    const match = trimmedQuery.match(/^(\d+(?:[.,]\d+)?)\s*[*]\s*(.+)/);
-
-    if (match) {
-      const quantity = parseFloat(match[1].replace(",", "."));
-      const productName = match[2];
-
-      setQuantityInput(quantity);
-      setProcessedQuery(productName); // este es un nuevo estado limpio sin el "3x"
-    } else {
-      setQuantityInput(1);
-      setProcessedQuery(trimmedQuery); // usamos el query tal cual si no hay x
-    }
     if (e.target.value == "") setIsSearchResultsOpen(false);
     else setIsSearchResultsOpen(true);
-    /*  if(filteredProducts.length == 0){
-      setIsProductNotFoundModalOpen(true);
-    } */
   };
 
   const handleSelectProduct = (product: Product) => {
     const existingProduct = selectedProducts.find(
       (sp) => sp.product.id === product.id
     );
+    console.log(quantityInput);
 
     if (!existingProduct) {
       // Si no está en la lista, lo agregamos con cantidad 1
@@ -238,7 +267,7 @@ const SalesCart: React.FC<SalesCartProps> = ({ onOpenAddProducts }) => {
           products={filteredProducts}
           onSelectProduct={handleSelectProduct}
         />
-        <form onSubmit={handleSearch} className="mt-4 relative">
+        <form onSubmit={handleSearch} className="mt-4 relative" ref={formRef}>
           <input
             type="text"
             placeholder="Buscar por nombre o código..."

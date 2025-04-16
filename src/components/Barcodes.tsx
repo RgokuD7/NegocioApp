@@ -125,6 +125,7 @@ const Barcodes: React.FC<Barcodes> = ({ isOpen, onOpenAddProducts }) => {
                         {b.barcode}
                       </h3>
                       <button
+                        id={`delete-${b.barcode}`}
                         className="text-gray-400 hover:text-red-500"
                         onClick={() => deleteBarcode(b.id)}>
                         <Trash />
@@ -146,6 +147,7 @@ const Barcodes: React.FC<Barcodes> = ({ isOpen, onOpenAddProducts }) => {
       <div>
         <form onSubmit={handleSearch} className="mt-4 relative">
           <input
+            id="search"
             type="text"
             placeholder="Buscar por nombre o código..."
             value={searchQuery}

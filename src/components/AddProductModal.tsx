@@ -141,11 +141,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         : "";
 
       if (id) {
-        if (!foundProductBarcode) {
+        if (!foundProductBarcode && barcodeInput != "") {
           if (foundIfBarcodeExist) {
-            window.electron.dialog.showError(
+            /* window.electron.dialog.showError(
               `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`
-            );
+            ); */
+            setAlert({
+              show: true,
+              type: "error",
+              message: `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`,
+            });
             return;
           } else {
             await window.electron.database.addBarcode(
@@ -159,13 +164,22 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       } else {
         productData.id = products.length + 1; // Asignar un nuevo ID
         if (foundIfBarcodeExist) {
-          window.electron.dialog.showError(
+          /* window.electron.dialog.showError(
             `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`
-          );
+          ); */
+          setAlert({
+            show: true,
+            type: "error",
+            message: `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`,
+          });
           return;
         }
         await window.electron.database.addProduct(productData);
-        await window.electron.database.addBarcode(productData.id, barcodeInput);
+        if (barcodeInput != "")
+          await window.electron.database.addBarcode(
+            productData.id,
+            barcodeInput
+          );
       }
 
       // Notificación de éxito
@@ -593,10 +607,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 onChange={() => handleCheckboxChange()}
                 disabled={false}
                 name="quick_access"
+                label="Acceso rapido"
               />
             </div>
 
-            {formData.quick_access && (
+            {formData.quick_access == true && (
               <div>
                 <input
                   type="text"

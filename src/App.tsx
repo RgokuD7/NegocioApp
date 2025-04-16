@@ -12,12 +12,65 @@ import AddProductModal from "./components/AddProductModal";
 import QuickAccessModal from "./components/QuickAccessModal";
 import DatabaseTab from "./components/DatabaseTab";
 import { Product } from "./types";
-import { formatCurrencyChile } from "./utils/utils";
 import SalesCart from "./components/SalesCart";
 import Barcodes from "./components/Barcodes";
 
+/* function useGlobalKeyPress(targetKey: string, callback: () => void) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === targetKey) {
+        callback();
+      }
+    };
+
+    // Agregar el event listener al montar el componente
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Limpiar el event listener al desmontar
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [targetKey, callback]);
+} */
+
+const useKeyboardShortcuts = (
+  quickAccessProducts: any[],
+  onShortcutPress: (productId: string) => void
+) => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignorar si el usuario está escribiendo en un input
+      /* if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      } */
+
+      // Buscar producto que coincida con la tecla presionada
+      const productWithShortcut = quickAccessProducts.find(
+        (product) =>
+          product.keyboard_shortcut &&
+          product.keyboard_shortcut.toLowerCase() === event.key.toLowerCase()
+      );
+
+      if (productWithShortcut) {
+        event.preventDefault(); // Evitar comportamiento por defecto
+        console.log(
+          `Atajo presionado: ${event.key} para producto ${productWithShortcut.name}`
+        );
+        onShortcutPress(productWithShortcut.id.toString());
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [quickAccessProducts, onShortcutPress]);
+};
+
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [shortcutPress, setShortcutPress] = useState("");
   const [selectedSection, setSelectedSection] = useState(""); // Estado para la sección seleccionada
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
@@ -39,6 +92,8 @@ function App() {
       );
     }
   };
+
+  useKeyboardShortcuts(quickAccessProducts, setShortcutPress);
 
   // Lógica para cambiar la sección derecha basada en la opción seleccionada
   let content;
@@ -71,11 +126,17 @@ function App() {
             {quickAccessProducts.map((product) => (
               <button
                 key={product.id}
+                onClick={() => setShortcutPress(product.id.toString())}
                 className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
                 <span className="font-medium">{product.name}</span>
-                <span className="text-sm opacity-80">
-                  {formatCurrencyChile(product.price)}
-                </span>
+                <span className="text-sm opacity-80">{product.id}</span>
+                {product.keyboard_shortcut != "" ? (
+                  <span className="text-sm opacity-80">
+                    {product.keyboard_shortcut}
+                  </span>
+                ) : (
+                  <></>
+                )}
               </button>
             ))}
           </div>
@@ -92,6 +153,7 @@ function App() {
               <span className="font-medium">Productos</span>
             </button>
             <button
+              id="barcodes"
               onClick={() => setSelectedSection("barcodes")}
               className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
               <Barcode size={24} className="mb-1" />
@@ -130,6 +192,8 @@ function App() {
             setIsMenuOpen(true);
             setSelectedSection("products");
           }}
+          onShortcutAdded={() => setShortcutPress("")}
+          shorcutData={shortcutPress}
         />
       )}
 

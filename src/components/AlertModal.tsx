@@ -46,6 +46,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
                 {alertType === "error" ? "Error" : "Éxito"}
               </h3>
               <button
+                id="close"
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500">
                 <X className="w-5 h-5" />
