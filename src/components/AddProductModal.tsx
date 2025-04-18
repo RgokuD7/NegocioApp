@@ -8,6 +8,8 @@ import ToggleSwitch from "./ui/switch";
 import { formatCurrencyChile } from "../utils/utils";
 import AlertModal from "./alertModal";
 import SearchResultsModal from "./SearchResultsModal";
+import CurrencyInput from "./ui/currencyInput";
+import { BarcodesCombobox } from "./ui/barcodesCombobox";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -26,11 +28,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [idInput, setIdInput] = useState<string>("");
-  const [barcodeInput, setBarcodeInput] = useState<string>("");
+  const [barcodeInput, setBarcodeInput] = useState<string | number>("");
   const [supplierCodeInput, setSupplierCodeInput] = useState<string>("");
-  const [categoryInput, setCategoryInput] = useState<string>("");
-  const [groupInput, setGroupInput] = useState<string>("");
-  const [unitInput, setUnitInput] = useState<string>("");
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [productBarcodes, setProductBarcodes] = useState<Barcode[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,12 +37,21 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isProductNotFoundModalOpen, setIsProductNotFoundModalOpen] =
     useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [formData, setFormData] = useState<Product>({
+  const [formData, setFormData] = useState<{
+    id: number;
+    name: string;
+    category_id: number | null;
+    group_id: number | null;
+    price: number | string;
+    unit_id: number | null;
+    quick_access: boolean;
+    keyboard_shortcut: string | null;
+  }>({
     id: 0,
     name: "",
     category_id: 0,
     group_id: 0,
-    price: 0,
+    price: "",
     unit_id: 0,
     quick_access: false,
     keyboard_shortcut: "",
@@ -126,21 +134,29 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       const productData: Product = {
         id: formData.id,
         name: formData.name,
-        category_id: parseInt(categoryInput) ?? null,
-        group_id: parseInt(groupInput) ?? null,
-        price: formData.price || 0,
-        unit_id: parseInt(unitInput) || null,
+        category_id: formData.category_id || null,
+        group_id: formData.group_id || null,
+        price: parseInt(formData.price.toString()) || 0,
+        unit_id: formData.unit_id || null,
         quick_access: formData.quick_access,
         keyboard_shortcut: formData.keyboard_shortcut || "",
       };
 
       console.table(productData);
 
-      const foundProductBarcode = productBarcodes.find(
-        (barcode) => barcode.barcode === parseInt(barcodeInput)
-      );
+      let foundProductBarcode;
+
+      if (typeof barcodeInput == "number")
+        foundProductBarcode = productBarcodes.find(
+          (barcode) => barcode.id === barcodeInput
+        );
+      else
+        foundProductBarcode = productBarcodes.find(
+          (barcode) => barcode.barcode === parseInt(barcodeInput.toString())
+        );
+
       const foundIfBarcodeExist = barcodes.find(
-        (barcode) => barcode.barcode === parseInt(barcodeInput)
+        (barcode) => barcode.barcode === parseInt(barcodeInput.toString())
       );
       const foundProductOfExistingBarcode = foundIfBarcodeExist
         ? await window.electron.database.searchProductsByBarcode(
@@ -165,7 +181,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           } else {
             await window.electron.database.addBarcode(
               productData.id,
-              barcodeInput
+              barcodeInput.toString()
             );
           }
         }
@@ -186,8 +202,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         await window.electron.database.addProduct(productData);
         if (barcodeInput != "")
           await window.electron.database.addBarcode(
-            productData.id,
-            barcodeInput
+            parseInt(idInput),
+            barcodeInput.toString()
           );
       }
 
@@ -212,10 +228,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       /* window.electron.dialog.showError(
         error.message || "Error al guardar el producto"
       ); */
+      const errorMsg = `Error guardando producto: ${error}`;
       setAlert({
         show: true,
         type: "error",
-        message: "Error guardando producto",
+        message: errorMsg,
       });
     } finally {
       setIsLoading(false);
@@ -261,48 +278,27 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setFormData({
         id: 0,
         name: "",
-        category_id: 0,
-        group_id: 0,
-        price: 0,
-        unit_id: 0,
+        category_id: null,
+        group_id: null,
+        price: "0",
+        unit_id: null,
         quick_access: false,
         keyboard_shortcut: "",
       });
       setIdInput(id.toString());
-
       setBarcodeInput("");
-      setCategoryInput("");
-      setGroupInput("");
-      setUnitInput("");
       return;
     }
-    const categoriesList = await window.electron.database.getCategories();
-    const groupsList = await window.electron.database.getGroups();
-    const unitsList = await window.electron.database.getUnits();
     const newProduct = productsList.find((p) => p.id === id);
     if (newProduct) {
       const productBarcodesData =
         await window.electron.database.getBarcodeByProductId(newProduct.id);
       if (productBarcodesData) {
         setProductBarcodes(productBarcodesData);
-        setBarcodeInput(productBarcodesData[0]?.barcode || "");
+        setBarcodeInput(productBarcodesData[0]?.barcode.toString() || "");
       }
-      const foundCategory = categoriesList.find(
-        (category) => category.id === newProduct.category_id
-      );
-      const foundGroup = groupsList.find(
-        (group) => group.id === newProduct.group_id
-      );
-      const foundUnit = unitsList.find(
-        (unit) => unit.id === newProduct.unit_id
-      );
-      if (foundCategory) setCategoryInput(foundCategory.name);
-      else setCategoryInput("");
-      if (foundGroup) setGroupInput(foundGroup.name);
-      else setGroupInput("");
-      if (foundUnit) setUnitInput(foundUnit.unit);
-      else setUnitInput("");
       setFormData(newProduct);
+      //console.log(newProduct);
       setIdInput(newProduct.id.toString()); // Actualizamos el input con el nuevo ID
     }
   };
@@ -346,7 +342,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     } */
     if (name === "id") {
-      const numericValue = value.replace(/\D/g, ""); // elimina todo lo que no sea dígito (0-9)
+      const numericValue = value.replace(/[^0-9]/g, ""); // elimina todo lo que no sea dígito (0-9)
       setIdInput(numericValue);
       handleIdChange(numericValue);
       if (parseInt(value) > products.length + 2) {
@@ -359,22 +355,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     if (name == "barcode") {
       setBarcodeInput(value);
       return;
-    }
-    if (name == "category_id") {
-      setCategoryInput(value);
-    }
-    if (name == "group_id") {
-      setGroupInput(value);
-      const foundGroup = groups.find((group) => group.id === parseInt(value));
-      if (foundGroup) {
-        setFormData((prev) => ({
-          ...prev,
-          price: foundGroup.price,
-        }));
-      }
-    }
-    if (name == "unit_id") {
-      setUnitInput(value);
     }
 
     setFormData((prev) => ({
@@ -420,26 +400,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
-  const handleSearchByBarcode = async () => {
-    const newProduct = await window.electron.database.searchProductsByBarcode(
-      parseInt(barcodeInput)
-    );
-    if (newProduct.length) {
-      setFormData(newProduct[0]);
-      setIdInput(newProduct[0].id.toString());
-      const productBarcodesData =
-        await window.electron.database.getBarcodeByProductId(newProduct[0].id);
-      if (productBarcodesData) {
-        setProductBarcodes(productBarcodesData);
-        setBarcodeInput(productBarcodesData[0]?.barcode || "");
-      }
-    } else {
-      window.electron.dialog.showError(
-        "No se encontró ningún producto con ese código de barras."
-      );
-    }
-  };
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery) {
@@ -456,12 +416,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         if (foundProduct) {
           setIdInput(foundProduct.id.toString());
           handleIdChange(foundProduct.id.toString());
+          setIsSearchResultsOpen(false);
           if (priceInputRef.current) priceInputRef.current.focus();
         }
       } else if (matchedId) {
         setIdInput(matchedId.id.toString());
         handleIdChange(matchedId.id.toString());
+        setIsSearchResultsOpen(false);
         if (priceInputRef.current) priceInputRef.current.focus();
+
+        if (priceInputRef.current) console.log(priceInputRef.current.value);
       } else {
         const foundPrducts = products.filter((p) =>
           p.name.toLowerCase().includes(searchQuery)
@@ -482,256 +446,292 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       p.name.toLowerCase().includes(searchQuery)
     );
     setFilteredProducts(foundPrducts);
-    if (query == "") setFilteredProducts(products);
-    else if (foundPrducts.length == 0) {
+    if (foundPrducts.length == 0) {
       return;
     }
+    if (query != "") setIsSearchResultsOpen(true);
+    else setIsSearchResultsOpen(false);
   };
+
   const handleSelectProduct = (product: Product) => {
     const existingProduct = products.find((p) => p.id === product.id);
     if (existingProduct) {
       setIdInput(product.id.toString());
       handleIdChange(product.id.toString());
+      setIsSearchResultsOpen(false);
     }
   };
 
   return (
     <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
-      <div className=" bg-white rounded-lg w-full p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">PRODUCTOS</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setIdInput((products.length + 1).toString());
-              handleIdChange((products.length + 1).toString());
-            }}
-            className="border border-gray-300 mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
-            disabled={isLoading}>
-            <Plus size={20} /> Agregar Nuevo
-          </button>
-        </div>
-
-        <form
-          onSubmit={(e: React.FormEvent) => handleSubmit(e, formData.id)}
-          className="space-y-4"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault(); // Evita que haga submit al presionar Enter
-            }
-          }}>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Código
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateIdInput(-1)}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <ChevronLeft size={20} />
-                </button>
-                <input
-                  type="number"
-                  name="id"
-                  value={idInput} // Aquí usamos `idInput` en lugar de `formData.id`
-                  onChange={handleChange} // Actualizamos el valor de `idInput`
-                  onBlur={() => handleIdChange(idInput)} // Confirmar cambio cuando el campo pierde el foco (puedes usar "onChange" para más interactividad)
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => updateIdInput(1)}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoría
-              </label>
-              <div className="flex gap-2">
-                <Combobox
-                  name="category_id"
-                  value={categoryInput}
-                  onChange={handleChange}
-                  options={categories.map((category) => ({
-                    id: category.id,
-                    value: category.name,
-                  }))}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setIsAddCategoryModalOpen(true)}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <Plus size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Grupo
-              </label>
-              <div className="flex gap-2">
-                <Combobox
-                  name="group_id"
-                  value={groupInput}
-                  onChange={handleChange}
-                  options={groups.map((group) => ({
-                    id: group.id,
-                    value: group.name,
-                  }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsAddGroupModalOpen(true)}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <Plus size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Codigos de barra
-              </label>
-              <div className="flex gap-2">
-                <Combobox
-                  name="barcode"
-                  value={barcodeInput}
-                  onChange={handleChange}
-                  options={productBarcodes.map((barcode) => ({
-                    id: barcode.id,
-                    value: barcode.barcode,
-                  }))}
-                />
-
-                <button
-                  type="button"
-                  onClick={handleSearchByBarcode}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <Search size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Coidgos prooveddor
-              </label>
-              <div className="flex gap-2">
-                <Combobox
-                  name="suplier_code"
-                  value={supplierCodeInput}
-                  onChange={handleChange}
-                  options={groups.map((group) => ({
-                    id: group.id,
-                    value: group.name,
-                  }))}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsAddGroupModalOpen(true)}
-                  className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                  <Search size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Precio
-              </label>
-              <input
-                ref={priceInputRef}
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                required
-                min="0"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unidad de medida
-              </label>
-              <Combobox
-                name="unit_id"
-                value={unitInput}
-                onChange={handleChange}
-                options={units.map((unit) => ({
-                  id: unit.id,
-                  value: unit.unit,
-                }))}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <ToggleSwitch
-                checked={formData.quick_access}
-                onChange={() => handleCheckboxChange()}
-                disabled={false}
-                name="quick_access"
-                label="Acceso rapido"
-              />
-            </div>
-
-            {formData.quick_access == true && (
-              <div>
-                <input
-                  type="text"
-                  name="keyboard_shortcut"
-                  id="keyboard_shortcut"
-                  value={formData.keyboard_shortcut ?? ""}
-                  onChange={handleChange}
-                  onKeyDown={handleKeyDown}
-                  style={{ width: "50px" }}
-                  readOnly
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
+      {!isSearchResultsOpen && (
+        <div className=" bg-white rounded-lg w-full p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">PRODUCTOS</h2>
             <button
-              type="submit"
-              className=" bg-[#007566] text-white hover:bg-[#006557] disabled:bg-gray-400 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
+              type="button"
+              onClick={() => {
+                setIdInput((products.length + 1).toString());
+                handleIdChange((products.length + 1).toString());
+              }}
+              className="border border-gray-300 mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
               disabled={isLoading}>
-              <Save size={20} />
-              {isLoading ? "Guardando..." : "Guardar Producto"}
+              <Plus size={20} /> Agregar Nuevo
             </button>
           </div>
-        </form>
-      </div>
 
-      {/* Search bar at the bottom */}
+          <form
+            onSubmit={(e: React.FormEvent) => handleSubmit(e, formData.id)}
+            className="space-y-4"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); // Evita que haga submit al presionar Enter
+              }
+            }}>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateIdInput(-1)}
+                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+                    <ChevronLeft size={20} />
+                  </button>
+                  <input
+                    type="text"
+                    name="id"
+                    value={idInput} // Aquí usamos `idInput` en lugar de `formData.id`
+                    onChange={handleChange} // Actualizamos el valor de `idInput`
+                    onBlur={() => handleIdChange(idInput)} // Confirmar cambio cuando el campo pierde el foco (puedes usar "onChange" para más interactividad)
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => updateIdInput(1)}
+                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Categoría
+                </label>
+                <div className="flex gap-2">
+                  <Combobox
+                    name="category_id"
+                    value={formData.category_id?.toString() ?? ""}
+                    onChange={(id) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        category_id: id, // Guardamos la tecla de acceso rápido
+                      }));
+                    }}
+                    options={categories.map((category) => ({
+                      id: category.id,
+                      value: category.name,
+                    }))}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddCategoryModalOpen(true)}
+                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+                    <Plus size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grupo
+                </label>
+                <div className="flex gap-2">
+                  <Combobox
+                    name="group_id"
+                    value={formData.group_id?.toString() ?? ""}
+                    onChange={(id) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        group_id: id, // Guardamos la tecla de acceso rápido
+                      }));
+                    }}
+                    options={groups.map((group) => ({
+                      id: group.id,
+                      value: group.name,
+                    }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsAddGroupModalOpen(true)}
+                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+                    <Plus size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Codigos de barra
+                </label>
+                <div className="flex gap-2">
+                  {/* <Combobox
+                    name="barcode"
+                    value={barcodeInput}
+                    onChange={(id) => {
+                      setBarcodeInput(id.toString());
+                    }}
+                    options={productBarcodes.map((barcode) => ({
+                      id: barcode.id,
+                      value: barcode.barcode,
+                    }))}
+                  /> */}
+                  <BarcodesCombobox
+                    value={barcodeInput}
+                    onChange={(barcode) => {
+                      console.log(barcode);
+                      setBarcodeInput(barcode);
+                    }}
+                    barcodes={productBarcodes}
+                    product_id={formData.id}
+                    onBarcodeAdded={(barcode) => {
+                      setBarcodes((prev) => [...prev, barcode]);
+                      setProductBarcodes((prev) => [...prev, barcode]);
+                    }}
+                    onBarcodeDeleted={(id) => {
+                      setBarcodes(
+                        barcodes.filter((barcode) => barcode.id !== id)
+                      );
+                      setProductBarcodes(
+                        productBarcodes.filter((barcode) => barcode.id !== id)
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Coidgos prooveddor
+                </label>
+                <div className="flex gap-2">
+                  {/*                   <Combobox
+                    name="suplier_code"
+                    value={supplierCodeInput}
+                    onChange={handleChange}
+                    options={groups.map((group) => ({
+                      id: group.id,
+                      value: group.name,
+                    }))}
+                  /> */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAddGroupModalOpen(true)}
+                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+                    <Search size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio
+                </label>
+                <CurrencyInput
+                  name="price"
+                  value={parseInt(formData.price.toString())}
+                  onChange={(value: number) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      price: value.toString(),
+                    }));
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unidad de medida
+                </label>
+                <Combobox
+                  name="unit_id"
+                  value={formData.unit_id?.toString() ?? ""}
+                  onChange={(id) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      unit_id: id,
+                    }));
+                  }}
+                  options={units.map((unit) => ({
+                    id: unit.id,
+                    value: unit.unit,
+                  }))}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <ToggleSwitch
+                  checked={formData.quick_access}
+                  onChange={() => handleCheckboxChange()}
+                  disabled={false}
+                  name="quick_access"
+                  label="Acceso rapido"
+                />
+              </div>
+
+              {formData.quick_access == true && (
+                <div>
+                  <input
+                    type="text"
+                    name="keyboard_shortcut"
+                    id="keyboard_shortcut"
+                    value={formData.keyboard_shortcut ?? ""}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    style={{ width: "50px" }}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="submit"
+                className=" bg-[#007566] text-white hover:bg-[#006557] disabled:bg-gray-400 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
+                disabled={isLoading}>
+                <Save size={20} />
+                {isLoading ? "Guardando..." : "Guardar Producto"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <div>
         <SearchResultsModal
           isOpen={isSearchResultsOpen}
@@ -742,6 +742,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           products={filteredProducts}
           onSelectProduct={handleSelectProduct}
         />
+      </div>
+
+      {/* Search bar at the bottom */}
+      <div>
         <form onSubmit={handleSearch} className="mt-4 relative">
           <input
             id="search"

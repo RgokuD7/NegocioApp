@@ -195,81 +195,93 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
   return (
     <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
-      <div className="flex-1 max-h-[70vh] overflow-y-auto">
-        {selectedProducts.length > 0 ? (
-          <div className="grid gap-4">
-            {selectedProducts.map((sp) => (
-              <div
-                key={sp.product.id}
-                className="bg-white grid rounded-lg p-4 shadow-sm">
-                <div className="flex justify-between">
-                  <h3 className="text-[#007566] font-medium text-lg">
-                    CÓDIGO: {sp.product.id}
-                  </h3>
-                  <div className="flex justify-between gap-5">
-                    <button
-                      onClick={() => {
-                        if (sp.quantity == 1)
-                          handleRemoveProduct(sp.product.id);
-                        else {
+      {!isSearchResultsOpen && (
+        <div className="flex-1 max-h-[80vh] overflow-y-auto">
+          {selectedProducts.length > 0 ? (
+            <div className="grid gap-4">
+              {selectedProducts.map((sp) => (
+                <div
+                  key={sp.product.id}
+                  className="bg-white grid rounded-lg p-4 shadow-sm">
+                  <div className="flex justify-between">
+                    <h3 className="text-[#007566] font-medium text-lg">
+                      CÓDIGO: {sp.product.id}
+                    </h3>
+                    <div className="flex justify-between gap-5">
+                      <button
+                        onClick={() => {
+                          if (sp.quantity == 1)
+                            handleRemoveProduct(sp.product.id);
+                          else {
+                            setSelectedProducts((prev) =>
+                              prev.map((prevsp) =>
+                                prevsp.product.id === sp.product.id
+                                  ? { ...prevsp, quantity: sp.quantity - 1 }
+                                  : prevsp
+                              )
+                            );
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500">
+                        <Minus size={20} />
+                      </button>
+                      <h3 className="text-[#007566] font-medium text-lg">
+                        {sp.quantity}
+                      </h3>
+                      <button
+                        onClick={() => {
                           setSelectedProducts((prev) =>
                             prev.map((prevsp) =>
                               prevsp.product.id === sp.product.id
-                                ? { ...prevsp, quantity: sp.quantity - 1 }
+                                ? { ...prevsp, quantity: sp.quantity + 1 }
                                 : prevsp
                             )
                           );
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500">
-                      <Minus size={20} />
-                    </button>
-                    <h3 className="text-[#007566] font-medium text-lg">
-                      {sp.quantity}
+                        }}
+                        className="text-gray-400 hover:text-[#007566]">
+                        <Plus size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveProduct(sp.product.id)}
+                        className="text-gray-400 hover:text-red-500">
+                        <Trash size={20} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <h3 className="font-medium text-lg">{sp.product.name}</h3>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <h3 className="font-medium text-lg text-gray-500">
+                      {formatCurrencyChile(sp.product.price)}
+                      {sp.product.unit_id
+                        ? getUnitById(sp.product.unit_id)?.price_unit || ""
+                        : ""}
                     </h3>
-                    <button
-                      onClick={() => {
-                        setSelectedProducts((prev) =>
-                          prev.map((prevsp) =>
-                            prevsp.product.id === sp.product.id
-                              ? { ...prevsp, quantity: sp.quantity + 1 }
-                              : prevsp
-                          )
-                        );
-                      }}
-                      className="text-gray-400 hover:text-[#007566]">
-                      <Plus size={20} />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveProduct(sp.product.id)}
-                      className="text-gray-400 hover:text-red-500">
-                      <Trash size={20} />
-                    </button>
+                    <h3 className="font-medium text-lg text-[#007566]">
+                      TOTAL:{" "}
+                      {formatCurrencyChile(sp.quantity * sp.product.price)}
+                    </h3>
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <h3 className="font-medium text-lg">{sp.product.name}</h3>
-                </div>
-                <div className="flex justify-between items-end">
-                  <h3 className="font-medium text-lg text-gray-500">
-                    {formatCurrencyChile(sp.product.price)}
-                    {sp.product.unit_id
-                      ? getUnitById(sp.product.unit_id)?.price_unit || ""
-                      : ""}
-                  </h3>
-                  <h3 className="font-medium text-lg text-[#007566]">
-                    TOTAL: {formatCurrencyChile(sp.quantity * sp.product.price)}
-                  </h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-600 text-center mt-4">
-            No hay productos que coincidan con la búsqueda
-          </p>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600 text-center mt-4">
+              No hay productos que coincidan con la búsqueda
+            </p>
+          )}
+        </div>
+      )}
+      <SearchResultsModal
+        isOpen={isSearchResultsOpen}
+        onClose={() => {
+          setIsSearchResultsOpen(false);
+          setSearchQuery("");
+        }}
+        products={filteredProducts}
+        onSelectProduct={handleSelectProduct}
+      />
 
       {/* Search bar at the bottom */}
       <div>
@@ -278,15 +290,6 @@ const SalesCart: React.FC<SalesCartProps> = ({
             TOTAL: {formatCurrencyChile(totalSale)}
           </h1>
         </div>
-        <SearchResultsModal
-          isOpen={isSearchResultsOpen}
-          onClose={() => {
-            setIsSearchResultsOpen(false);
-            setSearchQuery("");
-          }}
-          products={filteredProducts}
-          onSelectProduct={handleSelectProduct}
-        />
         <form onSubmit={handleSearch} className="mt-4 relative" ref={formRef}>
           <input
             ref={inputRef}

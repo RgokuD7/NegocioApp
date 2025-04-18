@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react"; // Si usas lucide-react para los íc
 interface ComboboxProps {
   name: string;
   value: string; // Este valor es el nombre de la opción seleccionada
-  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  onChange: (id: number) => void;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   options: Array<{ id: number; value: string | number }>;
   label?: string;
@@ -25,35 +25,45 @@ const Combobox: React.FC<ComboboxProps> = ({
 
   // Actualizar el inputValue cuando el valor cambia desde los props
   useEffect(() => {
-    const find = options.find((option) => option.value === value);
-    if (find) setInputValue(find.value.toString()); // Actualiza inputValue al valor de la prop value (el nombre)
+    const parsedValue = parseInt(value);
+    setFilteredOptions(options);
     if (!value) setInputValue("");
-    setFilteredOptions(options); // Si no hay valor, limpia el input
+    else if (value == "0") return;
+    else if (parsedValue) {
+      const findInputValue = options.find((option) => {
+        return option.id === parsedValue;
+      });
+      if (findInputValue) setInputValue(findInputValue.value.toString());
+    } else setInputValue(value.toString()); // Actualiza inputValue al valor de la prop value (el nombre)
   }, [value, options]);
 
   // Manejo del cambio en el input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setInputValue(query); // Actualiza el valor del input
+    const find = options.find((option) => {
+      return option.value.toString().toLowerCase() === query.toLowerCase();
+    });
     setFilteredOptions(
       options.filter(
         (option) =>
           option.value.toString().toLowerCase().includes(query.toLowerCase()) // Filtra las opciones según el texto escrito
       )
     );
-    onChange(e); // Llama a la función de onChange pasada como prop para actualizar el valor en el formulario
+    if (find) {
+      onChange(find.id);
+      setIsOpen(false);
+    } else onChange(0);
   };
 
   // Manejo de selección de una opción
   const handleOptionSelect = (option: {
-    id: string | number;
+    id: number;
     value: string | number;
   }) => {
-    setInputValue(option.value.toString()); // Establece el nombre como el valor del input
-    onChange({
-      target: { name, value: option.id, type: "combobox" }, // Pasa el nombre al evento de cambio
-    } as React.ChangeEvent<HTMLInputElement>);
+    onChange(option.id);
     setIsOpen(false); // Cierra el dropdown al seleccionar una opción
+    setInputValue(option.value.toString()); // Establece el nombre como el valor del input
   };
 
   return (

@@ -15,7 +15,7 @@ declare global {
         // ========================================================
         getBarcodes: () => Promise<Barcode[]>; // Obtiene todos los códigos de barras
         getBarcodeByProductId: (productId: number) => Promise<Barcode[]>; // Obtiene los códigos de barras por ID de producto
-        addBarcode: (productId: number, barcode: string) => Promise<void>; // Añade un código de barras a un producto
+        addBarcode: (productId: number, barcode: string) => Promise<Barcode>; // Añade un código de barras a un producto
         updateBarcode: (barcode: Barcode) => Promise<Barcode>; //Actualizar código de barras
         deleteBarcode: (id: number) => Promise<{ success: boolean }>; //Eliminar código de barras
 

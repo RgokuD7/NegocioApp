@@ -13,7 +13,6 @@ import QuickAccessModal from "./components/QuickAccessModal";
 import DatabaseTab from "./components/DatabaseTab";
 import { Product } from "./types";
 import SalesCart from "./components/SalesCart";
-import Barcodes from "./components/Barcodes";
 
 /* function useGlobalKeyPress(targetKey: string, callback: () => void) {
   useEffect(() => {
@@ -101,9 +100,6 @@ function App() {
     case "products":
       content = <AddProductModal isOpen={true} onProductAdded={loadData} />;
       break;
-    case "barcodes":
-      content = <Barcodes isOpen={true} />;
-      break;
     case "bd":
       content = <DatabaseTab />;
       break;
@@ -151,13 +147,6 @@ function App() {
               className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
               <PackageSearch size={24} className="mb-1" />
               <span className="font-medium">Productos</span>
-            </button>
-            <button
-              id="barcodes"
-              onClick={() => setSelectedSection("barcodes")}
-              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-              <Barcode size={24} className="mb-1" />
-              <span className="font-medium">Códigos De Barra</span>
             </button>
             <button
               onClick={() => setSelectedSection("bd")}

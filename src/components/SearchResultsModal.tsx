@@ -20,7 +20,7 @@ const SearchResultsModal: React.FC<SearchResultsModalProps> = ({
 
   return (
     <div className="rounded-lg w-full">
-      <div className="max-h-[20vh] overflow-y-auto">
+      <div className="max-h-[80vh] overflow-y-auto">
         {products.length > 0 ? (
           <div className="grid gap-4">
             {products.map((product) => (
