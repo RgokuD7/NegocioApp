@@ -63,8 +63,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     message: string;
   }>({ show: false, type: "success", message: "" });
 
-  const priceInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     loadData();
   }, []);
@@ -436,17 +434,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         if (foundProduct) {
           setIdInput(foundProduct.id.toString());
           handleIdChange(foundProduct.id.toString());
+          setFocusPrice(true);
           setIsSearchResultsOpen(false);
-          if (priceInputRef.current) priceInputRef.current.focus();
         }
       } else if (matchedId) {
         setIdInput(matchedId.id.toString());
         handleIdChange(matchedId.id.toString());
         setIsSearchResultsOpen(false);
         setFocusPrice(true);
-        if (priceInputRef.current) priceInputRef.current.focus();
-
-        if (priceInputRef.current) console.log(priceInputRef.current.value);
       } else {
         const foundPrducts = products.filter((p) =>
           p.name.toLowerCase().includes(searchQuery)
@@ -639,7 +634,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
 
               <div className="flex-1">
-               {/*  <label className="block text-sm font-medium text-gray-700 mb-1">
+                {/*  <label className="block text-sm font-medium text-gray-700 mb-1">
                   Coidgos prooveddor
                 </label>
                 <div className="flex gap-2">
