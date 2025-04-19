@@ -3,8 +3,8 @@ import { ChevronDown } from "lucide-react"; // Si usas lucide-react para los íc
 
 interface ComboboxProps {
   name: string;
-  value: string; // Este valor es el nombre de la opción seleccionada
-  onChange: (id: number) => void;
+  value: string | number; // Este valor es el nombre de la opción seleccionada
+  onChange: (id: number | string) => void;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   options: Array<{ id: number; value: string | number }>;
   label?: string;
@@ -25,16 +25,18 @@ const Combobox: React.FC<ComboboxProps> = ({
 
   // Actualizar el inputValue cuando el valor cambia desde los props
   useEffect(() => {
-    const parsedValue = parseInt(value);
-    setFilteredOptions(options);
-    if (!value) setInputValue("");
-    else if (value == "0") return;
-    else if (parsedValue) {
+    if (!value) {
+      setInputValue("");
+      setFilteredOptions(options);
+    } else if (typeof value == "number") {
       const findInputValue = options.find((option) => {
-        return option.id === parsedValue;
+        return option.id === value;
       });
       if (findInputValue) setInputValue(findInputValue.value.toString());
-    } else setInputValue(value.toString()); // Actualiza inputValue al valor de la prop value (el nombre)
+      setFilteredOptions(options);
+    } else {
+      setInputValue(value);
+    }
   }, [value, options]);
 
   // Manejo del cambio en el input
@@ -53,7 +55,7 @@ const Combobox: React.FC<ComboboxProps> = ({
     if (find) {
       onChange(find.id);
       setIsOpen(false);
-    } else onChange(0);
+    } else onChange(query);
   };
 
   // Manejo de selección de una opción

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Save, Search, Trash } from "lucide-react"; // Si usas lucide-react para los íconos
 import { Barcode } from "../../types";
-import AlertModal from "../alertModal";
+import AlertModal from "../AlertModal";
 
 interface BarcodesComboboxProps {
   value: string | number; // Este valor es el nombre de la opción seleccionada
@@ -23,7 +23,8 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
   onBarcodeDeleted,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(value); // Esto debe ser el nombre de la opción seleccionada
+  const [inputValue, setInputValue] = useState(value);
+  const [isDisabled, setIsDisabled] = useState(false);
   const [alert, setAlert] = useState<{
     show: boolean;
     type: "error" | "success";
@@ -42,6 +43,14 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
       setInputValue(value);
     }
   }, [value, barcodes]);
+
+  useEffect(() => {
+    const checkProduct = async () => {
+      const products = await window.electron.database.getProducts();
+      setIsDisabled(products.some((product) => product.id === product_id));
+    };
+    checkProduct();
+  }, [product_id]);
 
   // Manejo del cambio en el input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,10 +81,11 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
   };
 
   const handleAddBarcode = async () => {
-    const find = barcodes.find((barcode) => {
-      return barcode.barcode.toString() == inputValue;
+    const allBarcodes = await window.electron.database.getBarcodes();
+    const findIfExist = allBarcodes.find((barcode) => {
+      return barcode.barcode == inputValue;
     });
-    if (!find) {
+    if (!findIfExist) {
       try {
         const newBarcode = await window.electron.database.addBarcode(
           product_id,
@@ -96,6 +106,16 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
           message: "No se pudo agregar el código d ebarras",
         });
       }
+    } else {
+      const foundProductOfExistingBarcode =
+        await window.electron.database.searchProductsByBarcode(
+          findIfExist.barcode
+        );
+      setAlert({
+        show: true,
+        type: "error",
+        message: `Este código de barras ya está en uso por ${foundProductOfExistingBarcode[0].name}`,
+      });
     }
   };
 
@@ -168,7 +188,7 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
         <button
           type="button"
           onClick={handleAddBarcode}
-          disabled={inputValue == ""}
+          disabled={inputValue == "" || !isDisabled}
           className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557] disabled:bg-gray-400">
           <Save size={20} />
         </button>

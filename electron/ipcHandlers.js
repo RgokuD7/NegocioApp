@@ -543,7 +543,7 @@ export function registerIpcHandlers(ipcMain, db) {
         product.category_id,
         product.group_id,
         product.price,
-        product.unit_code,
+        product.unit_id,
         product.quick_access ? 1 : 0,
         product.keyboard_shortcut ?? ""
       );

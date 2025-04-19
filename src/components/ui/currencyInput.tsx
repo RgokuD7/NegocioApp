@@ -1,22 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { formatCurrencyChile, parseCurrencyInput } from "../../utils/utils";
 
 interface CurrencyInputProps {
   name: string;
-  value: number; // Cambiado a number para consistencia
-  onChange: (value: number) => void; // Mejor tipo para el manejador
+  value: number;
+  onChange: (value: number) => void;
+  onChangeFocus: () => void;
   className?: string;
+  isFocus: boolean;
 }
 
+// Usamos forwardRef para exponer la ref del input interno
 const CurrencyInput: React.FC<CurrencyInputProps> = ({
   name,
   value,
   onChange,
+  onChangeFocus,
   className,
+  isFocus = false, // Valor por defecto
 }) => {
   const [displayValue, setDisplayValue] = useState("");
 
-  // Efecto para sincronizar el valor inicial y cambios externos
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Efecto para manejar el focus cuando `isFocus` cambia
+  useEffect(() => {
+    if (isFocus && inputRef.current) {
+      inputRef.current.focus();
+      if (onChangeFocus) onChangeFocus;
+    }
+  }, [isFocus]);
+
   useEffect(() => {
     setDisplayValue(formatCurrencyChile(value));
   }, [value]);
@@ -25,7 +39,6 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     const rawValue = e.target.value.replace(/[^0-9$.]/g, "");
     setDisplayValue(rawValue);
 
-    // Permitir campo vacío temporalmente
     if (rawValue === "") {
       onChange(0);
       return;
@@ -46,6 +59,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   return (
     <input
+      ref={inputRef} // <-- Ahora la ref apunta directamente al input
       type="text"
       name={name}
       value={displayValue}

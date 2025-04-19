@@ -6,7 +6,7 @@ import AddGroupModal from "./AddGroupModal";
 import { Combobox } from "./ui/combobox";
 import ToggleSwitch from "./ui/switch";
 import { formatCurrencyChile } from "../utils/utils";
-import AlertModal from "./alertModal";
+import AlertModal from "./AlertModal";
 import SearchResultsModal from "./SearchResultsModal";
 import CurrencyInput from "./ui/currencyInput";
 import { BarcodesCombobox } from "./ui/barcodesCombobox";
@@ -32,6 +32,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [supplierCodeInput, setSupplierCodeInput] = useState<string>("");
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [productBarcodes, setProductBarcodes] = useState<Barcode[]>([]);
+  const [focusPrice, setFocusPrice] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchResultsOpen, setIsSearchResultsOpen] = useState(false);
   const [isProductNotFoundModalOpen, setIsProductNotFoundModalOpen] =
@@ -40,10 +41,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [formData, setFormData] = useState<{
     id: number;
     name: string;
-    category_id: number | null;
-    group_id: number | null;
+    category_id: number | null | string;
+    group_id: number | null | string;
     price: number | string;
-    unit_id: number | null;
+    unit_id: number | null | string;
     quick_access: boolean;
     keyboard_shortcut: string | null;
   }>({
@@ -134,10 +135,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       const productData: Product = {
         id: formData.id,
         name: formData.name,
-        category_id: formData.category_id || null,
-        group_id: formData.group_id || null,
+        category_id: parseInt(formData.category_id?.toString() ?? "") || null,
+        group_id: parseInt(formData.group_id?.toString() ?? "") || null,
         price: parseInt(formData.price.toString()) || 0,
-        unit_id: formData.unit_id || null,
+        unit_id: parseInt(formData.unit_id?.toString() ?? "") || null,
         quick_access: formData.quick_access,
         keyboard_shortcut: formData.keyboard_shortcut || "",
       };
@@ -363,6 +364,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     }));
   };
 
+  const handleGroupChange = (id: number | string) => {
+    setFormData((prev) => ({
+      ...prev,
+      group_id: id ?? "", // Guardamos la tecla de acceso rápido
+    }));
+    if (typeof id == "number") {
+      const foundGroup = groups.find((group) => {
+        return group.id == id;
+      });
+      if (foundGroup) {
+        console.log(foundGroup);
+        setFormData((prev) => ({
+          ...prev,
+          price: foundGroup.price.toString(),
+        }));
+      }
+    }
+  };
+
   const handleKeyDown = async (
     evento: React.KeyboardEvent<HTMLInputElement>
   ) => {
@@ -423,6 +443,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         setIdInput(matchedId.id.toString());
         handleIdChange(matchedId.id.toString());
         setIsSearchResultsOpen(false);
+        setFocusPrice(true);
         if (priceInputRef.current) priceInputRef.current.focus();
 
         if (priceInputRef.current) console.log(priceInputRef.current.value);
@@ -443,7 +464,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     const query = e.target.value;
     setSearchQuery(query);
     const foundPrducts = products.filter((p) =>
-      p.name.toLowerCase().includes(searchQuery)
+      p.name.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredProducts(foundPrducts);
     if (foundPrducts.length == 0) {
@@ -540,11 +561,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 <div className="flex gap-2">
                   <Combobox
                     name="category_id"
-                    value={formData.category_id?.toString() ?? ""}
+                    value={formData.category_id ?? ""}
                     onChange={(id) => {
                       setFormData((prev) => ({
                         ...prev,
-                        category_id: id, // Guardamos la tecla de acceso rápido
+                        category_id: id ?? "", // Guardamos la tecla de acceso rápido
                       }));
                     }}
                     options={categories.map((category) => ({
@@ -569,12 +590,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 <div className="flex gap-2">
                   <Combobox
                     name="group_id"
-                    value={formData.group_id?.toString() ?? ""}
+                    value={formData.group_id ?? ""}
                     onChange={(id) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        group_id: id, // Guardamos la tecla de acceso rápido
-                      }));
+                      handleGroupChange(id);
                     }}
                     options={groups.map((group) => ({
                       id: group.id,
@@ -596,17 +614,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   Codigos de barra
                 </label>
                 <div className="flex gap-2">
-                  {/* <Combobox
-                    name="barcode"
-                    value={barcodeInput}
-                    onChange={(id) => {
-                      setBarcodeInput(id.toString());
-                    }}
-                    options={productBarcodes.map((barcode) => ({
-                      id: barcode.id,
-                      value: barcode.barcode,
-                    }))}
-                  /> */}
                   <BarcodesCombobox
                     value={barcodeInput}
                     onChange={(barcode) => {
@@ -632,11 +639,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+               {/*  <label className="block text-sm font-medium text-gray-700 mb-1">
                   Coidgos prooveddor
                 </label>
                 <div className="flex gap-2">
-                  {/*                   <Combobox
+                                    <Combobox
                     name="suplier_code"
                     value={supplierCodeInput}
                     onChange={handleChange}
@@ -644,14 +651,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                       id: group.id,
                       value: group.name,
                     }))}
-                  /> */}
+                  />
                   <button
                     type="button"
                     onClick={() => setIsAddGroupModalOpen(true)}
                     className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
                     <Search size={20} />
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -669,6 +676,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                       price: value.toString(),
                     }));
                   }}
+                  isFocus={focusPrice}
+                  onChangeFocus={() => setFocusPrice(false)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#007566]"
                 />
               </div>
@@ -679,11 +688,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 </label>
                 <Combobox
                   name="unit_id"
-                  value={formData.unit_id?.toString() ?? ""}
+                  value={formData.unit_id ?? ""}
                   onChange={(id) => {
                     setFormData((prev) => ({
                       ...prev,
-                      unit_id: id,
+                      unit_id: id ?? "",
                     }));
                   }}
                   options={units.map((unit) => ({
