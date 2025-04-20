@@ -47,7 +47,6 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       const sale: Sale = {
         id: 0,
-        date: "",
         total: totalSale,
         payment_method: "",
       };

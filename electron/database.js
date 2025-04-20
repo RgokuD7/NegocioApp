@@ -138,7 +138,6 @@ function createTables(db) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         total INTEGER NOT NULL,
         payment_method TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

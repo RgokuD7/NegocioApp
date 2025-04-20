@@ -45,7 +45,6 @@ export interface Unit {
 }
 export interface Sale {
   id: number;
-  date: string;
   total: number;
   payment_method: string | null;
 }
