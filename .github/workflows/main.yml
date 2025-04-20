@@ -2,7 +2,7 @@ name: Build Electron App
 
 on:
   push:
-    branches: [main] # o la rama que estés usando
+    branches: [main]
   pull_request:
 
 jobs:
@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Installer
-          path: dist\*.exe
+          path: dist/*.exe
