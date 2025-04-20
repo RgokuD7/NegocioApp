@@ -80,6 +80,28 @@ function createTables(db) {
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
       )
     `);
+    db.exec(`
+      -- 1. Crear tabla temporal con todas las restricciones (incluyendo UNIQUE en barcode)
+      CREATE TABLE IF NOT EXISTS barcodes_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        barcode INTEGER NOT NULL UNIQUE,  -- ¡Restricción UNIQUE añadida aquí!
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      );
+    
+      -- 2. Copiar datos de la tabla antigua a la nueva (omitir duplicados si los hay)
+      INSERT OR IGNORE INTO barcodes_new (id, product_id, barcode, created_at, updated_at)
+      SELECT id, product_id, barcode, created_at, updated_at FROM barcodes;
+    
+      -- 3. Eliminar tabla antigua y renombrar la nueva
+      DROP TABLE barcodes;
+      ALTER TABLE barcodes_new RENAME TO barcodes;
+
+      
+
+    `);
 
     // Tabla de unidades
     db.exec(`
@@ -135,28 +157,7 @@ function createTables(db) {
   DROP TABLE products;
   ALTER TABLE products_temp RENAME TO products;`);
 
-    db.exec(`
-      -- 1. Crear tabla temporal con todas las restricciones (incluyendo UNIQUE en barcode)
-      CREATE TABLE IF NOT EXISTS barcodes_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        barcode INTEGER NOT NULL UNIQUE,  -- ¡Restricción UNIQUE añadida aquí!
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-      );
-    
-      -- 2. Copiar datos de la tabla antigua a la nueva (omitir duplicados si los hay)
-      INSERT OR IGNORE INTO barcodes_new (id, product_id, barcode, created_at, updated_at)
-      SELECT id, product_id, barcode, created_at, updated_at FROM barcodes;
-    
-      -- 3. Eliminar tabla antigua y renombrar la nueva
-      DROP TABLE barcodes;
-      ALTER TABLE barcodes_new RENAME TO barcodes;
 
-      
-
-    `);
 
     // Tabla de provedores
     db.exec(`
