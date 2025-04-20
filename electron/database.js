@@ -69,7 +69,29 @@ function createTables(db) {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // Tabla de codigos de barras
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS  barcodes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        barcode INTEGER NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      )
+    `);
 
+    // Tabla de unidades
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS units (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        unit TEXT NOT NULL UNIQUE,
+        singular_unit TEXT NOT NULL UNIQUE,
+        price_unit TEXT NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     // Tabla de productos
     db.exec(`
       CREATE TABLE IF NOT EXISTS products (
@@ -112,17 +134,6 @@ function createTables(db) {
  
   DROP TABLE products;
   ALTER TABLE products_temp RENAME TO products;`);
-    // Tabla de codigos de barras
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS  barcodes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        barcode INTEGER NOT NULL UNIQUE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-      )
-    `);
 
     db.exec(`
       -- 1. Crear tabla temporal con todas las restricciones (incluyendo UNIQUE en barcode)
@@ -169,18 +180,6 @@ function createTables(db) {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Tabla de unidades
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS units (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        unit TEXT NOT NULL UNIQUE,
-        singular_unit TEXT NOT NULL UNIQUE,
-        price_unit TEXT NOT NULL UNIQUE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
