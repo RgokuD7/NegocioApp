@@ -3,7 +3,6 @@ name: Build Electron App
 on:
   push:
     branches: [main]
-  pull_request:
 
 jobs:
   build:
@@ -17,19 +16,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build app
+      - name: Build App
         run: npm run build
 
-      - name: Electron build
+      - name: Build Electron App
         run: npm run electron:build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: Installer
           path: dist/*.exe
