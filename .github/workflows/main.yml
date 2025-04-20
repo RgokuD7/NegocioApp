@@ -1,0 +1,35 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [main] # o la rama que estés usando
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app
+        run: npm run build
+
+      - name: Electron build
+        run: npm run electron:build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Installer
+          path: dist\*.exe
