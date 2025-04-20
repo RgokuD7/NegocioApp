@@ -28,7 +28,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       inputRef.current.focus();
     }
     const total = cartItems.reduce(
-      (sum, sl) => sum + sl.product.price * sl.quantity,
+      (sum, sl) => sum + roundToNearestTen(sl.product.price * sl.quantity),
       0
     );
     setTotalSale(total);

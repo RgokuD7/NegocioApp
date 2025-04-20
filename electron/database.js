@@ -268,12 +268,6 @@ function createTables(db) {
   ON sale_items (product_id);
 `);
 
-    // Índice para la tabla de ventas por fecha
-    db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_sales_date
-  ON sales (date);
-`);
-
     // Índices para la tabla de códigos de proveedores
     db.exec(`
   CREATE INDEX IF NOT EXISTS idx_suppliers_codes_supplier_id
