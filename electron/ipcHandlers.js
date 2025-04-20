@@ -236,7 +236,7 @@ export function registerIpcHandlers(ipcMain, db) {
 
   ipcMain.handle("get-barcode-by-product-id", async (_, productId) => {
     try {
-      validateId(productId, "producto");
+      //validateId(productId, "producto");
       const result = statements.getBarcodeByProductId.all(productId);
       return result;
     } catch (error) {
@@ -536,9 +536,10 @@ export function registerIpcHandlers(ipcMain, db) {
     try {
       validateProduct(product);
 
-      console.log("Product:", product.keyboard_shortcut);
+      console.log("Product:", product);
 
       const result = statements.insertProduct.run(
+        product.id,
         product.name.trim(),
         product.category_id,
         product.group_id,
@@ -639,7 +640,7 @@ export function registerIpcHandlers(ipcMain, db) {
 
   ipcMain.handle("delete-product", async (_, id) => {
     try {
-      validateId(id, "producto");
+      //validateId(id, "producto");
 
       const result = statements.deleteProduct.run(id);
 
@@ -737,12 +738,12 @@ export function registerIpcHandlers(ipcMain, db) {
   ipcMain.handle("add-sale", async (_, sale) => {
     try {
       validateNumber(sale.total, "total de venta");
-      validateString(sale.payment_method, "método de pago");
+      //validateString(sale.payment_method, "método de pago");
       const result = statements.insertSale.run(
         sale.total,
         sale.payment_method.trim()
       );
-      return { id: result.lastInsertRowid, ...sale };
+      return result.lastInsertRowid;
     } catch (error) {
       console.error("Error adding sale:", error);
       throw new Error(`Error al añadir venta: ${error.message}`);
@@ -794,7 +795,7 @@ export function registerIpcHandlers(ipcMain, db) {
   ipcMain.handle("add-sale-item", async (_, saleItem) => {
     try {
       validateId(saleItem.sale_id, "venta");
-      validateId(saleItem.product_id, "producto");
+      //validateId(saleItem.product_id, "producto");
       validateNumber(saleItem.quantity, "cantidad");
       validateNumber(saleItem.price, "precio");
       validateNumber(saleItem.subtotal, "subtotal");
@@ -1069,6 +1070,7 @@ function prepareStatements(db) {
       LEFT JOIN units u ON p.unit_id = u.id
       ORDER BY p.id
     `),
+
     getQuickAccessProducts: db.prepare(`
       SELECT p.*
       FROM products p
@@ -1086,10 +1088,10 @@ function prepareStatements(db) {
       WHERE keyboard_shortcut = ?
     `),
     insertProduct: db.prepare(`
-      INSERT INTO products (
+      INSERT INTO products (id,
         name, category_id, group_id, 
         price, unit_id, quick_access, keyboard_shortcut
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `),
     updateProduct: db.prepare(`
       UPDATE products SET 
@@ -1167,16 +1169,16 @@ function prepareStatements(db) {
       WHERE sale_id = ?
       ORDER BY id
     `),
-    insertSaleDetail: db.prepare(`
-      INSERT INTO sale_items (sale_id, product_id, quantity, price)
-      VALUES (?, ?, ?, ?)
+    insertSaleItem: db.prepare(`
+      INSERT INTO sale_items (sale_id, product_id, quantity, price, subtotal)
+      VALUES (?, ?, ?, ?, ?)
     `),
-    updateSaleDetail: db.prepare(`
+    updateSaleItem: db.prepare(`
       UPDATE sale_items
       SET sale_id = ?, product_id = ?, quantity = ?, price = ?
       WHERE id = ?
     `),
-    deleteSaleDetail: db.prepare(`
+    deleteSaleItem: db.prepare(`
       DELETE FROM sale_items
       WHERE id = ?
     `),

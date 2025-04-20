@@ -5,9 +5,12 @@ interface CurrencyInputProps {
   name: string;
   value: number;
   onChange: (value: number) => void;
-  onChangeFocus: () => void;
+  onChangeFocus?: () => void;
   className?: string;
-  isFocus: boolean;
+  isFocus?: boolean;
+  placeholder?: string;
+  min?: number;
+  max?: number;
 }
 
 // Usamos forwardRef para exponer la ref del input interno
@@ -18,6 +21,9 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   onChangeFocus,
   className,
   isFocus = false, // Valor por defecto
+  placeholder,
+  min,
+  max,
 }) => {
   const [displayValue, setDisplayValue] = useState("");
 
@@ -32,7 +38,9 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   }, [isFocus]);
 
   useEffect(() => {
-    setDisplayValue(formatCurrencyChile(value));
+    if (value == 0) {
+      setDisplayValue("");
+    } else setDisplayValue(formatCurrencyChile(value));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +74,9 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
       onChange={handleChange}
       onBlur={handleBlur}
       className={className}
+      placeholder={placeholder}
+      min={min}
+      max={max}
     />
   );
 };

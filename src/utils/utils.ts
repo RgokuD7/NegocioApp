@@ -11,7 +11,7 @@ export const formatCurrencyChile = (number: number): string => {
     minimumFractionDigits: 0, // Para no mostrar decimales en CLP
     maximumFractionDigits: 0,
   }).format(number);
-};
+}; 
 
 export const parseCurrencyInput = (formattedValue: string): number => {
   // Eliminar símbolos y separadores de miles
@@ -20,4 +20,8 @@ export const parseCurrencyInput = (formattedValue: string): number => {
     .trim();
 
   return parseInt(cleanValue) || 0; // Convertir a número, default 0
+};
+
+export const roundToNearestTen = (num: number): number => {
+  return Math.round(num / 10) * 10;
 };

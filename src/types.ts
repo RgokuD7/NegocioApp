@@ -53,7 +53,7 @@ export interface Sale {
 export interface SaleItem {
   id: number;
   sale_id: number;
-  product_id: number;
+  product_id: number | null;
   quantity: number;
   price: number;
   subtotal: number;

@@ -177,6 +177,7 @@ function App() {
 
       {!isMenuOpen && (
         <SalesCart
+          isOpen={!isMenuOpen}
           onOpenAddProducts={() => {
             setIsMenuOpen(true);
             setSelectedSection("products");

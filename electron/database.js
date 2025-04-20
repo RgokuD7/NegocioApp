@@ -10,8 +10,8 @@ const __dirname = dirname(__filename);
 //const dbPath = path.join(app.getPath("userData"), "database.sqlite");
 // Ruta DINÁMICA para la base de datos
 function getDbPath() {
-  if (process.env.NODE_ENV === 'test') {
-    return path.join(__dirname, '../tests/test-database.sqlite'); // Ruta para pruebas
+  if (process.env.NODE_ENV === "test") {
+    return path.join(__dirname, "../tests/test-database.sqlite"); // Ruta para pruebas
   }
   return path.join(app.getPath("userData"), "database.sqlite"); // Ruta producción
 }
@@ -46,6 +46,9 @@ export async function initializeDatabase() {
 function createTables(db) {
   // Iniciar transacción
   const transaction = db.transaction(() => {
+    db.exec(`DROP TRIGGER IF EXISTS update_groups_timestamp;
+      
+      DROP TABLE IF EXISTS sale_items;`);
     // Tabla de categorías
     db.exec(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -67,16 +70,81 @@ function createTables(db) {
       )
     `);
 
-    // Tabla de codigos de barras
+    // Tabla de productos
     db.exec(`
-      CREATE TABLE IF NOT EXISTS barcodes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER NOT NULL,
-        barcode INTEGER NOT NULL,
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        category_id INTEGER,
+        group_id INTEGER,
+        price INTEGER NOT NULL DEFAULT 0,
+        unit_id INTEGER,
+        quick_access BOOLEAN,
+        keyboard_shortcut TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL,
+        FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL
       )
+    `);
+
+    // 1. Crear tabla temporal sin AUTOINCREMENT
+    db.exec(`
+  CREATE TABLE IF NOT EXISTS products_temp (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    category_id INTEGER,
+    group_id INTEGER,
+    price INTEGER NOT NULL DEFAULT 0,
+    unit_id INTEGER,
+    quick_access BOOLEAN,
+    keyboard_shortcut TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL,
+    FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL
+  );
+
+  INSERT INTO products_temp
+  SELECT * FROM products;
+ 
+  DROP TABLE products;
+  ALTER TABLE products_temp RENAME TO products;`);
+    // Tabla de codigos de barras
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS  barcodes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        barcode INTEGER NOT NULL UNIQUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      )
+    `);
+
+    db.exec(`
+      -- 1. Crear tabla temporal con todas las restricciones (incluyendo UNIQUE en barcode)
+      CREATE TABLE IF NOT EXISTS barcodes_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        barcode INTEGER NOT NULL UNIQUE,  -- ¡Restricción UNIQUE añadida aquí!
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      );
+    
+      -- 2. Copiar datos de la tabla antigua a la nueva (omitir duplicados si los hay)
+      INSERT OR IGNORE INTO barcodes_new (id, product_id, barcode, created_at, updated_at)
+      SELECT id, product_id, barcode, created_at, updated_at FROM barcodes;
+    
+      -- 3. Eliminar tabla antigua y renombrar la nueva
+      DROP TABLE barcodes;
+      ALTER TABLE barcodes_new RENAME TO barcodes;
+
+      
+
     `);
 
     // Tabla de provedores
@@ -101,25 +169,6 @@ function createTables(db) {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-      )
-    `);
-
-    // Tabla de productos
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        category_id INTEGER,
-        group_id INTEGER,
-        price INTEGER NOT NULL DEFAULT 0,
-        unit_id INTEGER,
-        quick_access BOOLEAN,
-        keyboard_shortcut TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
-        FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE SET NULL,
-        FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL
       )
     `);
 
@@ -153,14 +202,14 @@ function createTables(db) {
     CREATE TABLE IF NOT EXISTS sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sale_id INTEGER NOT NULL,
-      product_id INTEGER NOT NULL,
+      product_id INTEGER,
       quantity REAL NOT NULL,
       price INTEGER NOT NULL,
       subtotal INTEGER NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT
+      FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE SET NULL
     )
     `);
 

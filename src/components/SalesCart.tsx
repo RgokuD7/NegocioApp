@@ -2,15 +2,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { Minus, Plus, Search, Trash } from "lucide-react";
 import SearchResultsModal from "./SearchResultsModal";
 import { Product, Unit, Barcode } from "../types";
-import { formatCurrencyChile } from "../utils/utils";
+import { formatCurrencyChile, roundToNearestTen } from "../utils/utils";
 import ProductNotFoundModal from "./ProductNotFoundModal";
+import ProvisionalProductModal from "./ProvisionalProductModal";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
+import PaymentModal from "./PaymentModal";
+import AlertModal from "./AlertModal";
 
 interface SalesCartProps {
+  isOpen: boolean;
   onOpenAddProducts?: () => void;
   onShortcutAdded: () => void;
   shorcutData: string;
 }
 const SalesCart: React.FC<SalesCartProps> = ({
+  isOpen,
   onOpenAddProducts,
   onShortcutAdded,
   shorcutData,
@@ -25,9 +31,44 @@ const SalesCart: React.FC<SalesCartProps> = ({
   const [totalSale, setTotalSale] = useState<number>(0);
   const [isProductNotFoundModalOpen, setIsProductNotFoundModalOpen] =
     useState(false);
+  const [isProvisionalProductModalOpen, setIsProvisionalProductModalOpen] =
+    useState(false);
+  const [provisionalId, setProvisionalId] = useState<number>(-1);
+  const [focusElement, setFocusElement] = useState<number>(-1);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<
     { product: Product; quantity: number }[]
   >([]);
+
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    type: "error" | "success";
+    message: string;
+    duration: number;
+  }>({ show: false, type: "success", message: "", duration: 1000 });
+
+  useGlobalKeyPress("F8", () => {
+    if (isOpen) {
+      // Solo responde si el SalesCart está activo
+      setIsProvisionalProductModalOpen(!isProvisionalProductModalOpen);
+    }
+  });
+
+  useGlobalKeyPress(" ", () => {
+    if (isOpen) {
+      // Solo responde si el SalesCart está activo
+      if (selectedProducts.length > 0) {
+        setIsPaymentModalOpen(true);
+      }
+    }
+  });
+
+  useGlobalKeyPress("F5", () => {
+    if (isOpen) {
+      // Solo responde si el SalesCart está activo
+      setSelectedProducts([]);
+    }
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,21 +79,17 @@ const SalesCart: React.FC<SalesCartProps> = ({
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Verificación exhaustiva de null
-      if (inputRef.current instanceof HTMLInputElement) {
-        inputRef.current.focus();
-        inputRef.current.select();
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+    if (isOpen && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
-    console.log(shorcutData);
     if (typeof shorcutData === "string" && shorcutData.trim() !== "") {
-      setSearchQuery((prev) => `${prev}${shorcutData}`);
+      setProcessedQuery(shorcutData);
+      // setSearchQuery((prev) => `${prev}${shorcutData}`);
       if (onShortcutAdded) onShortcutAdded();
       setTimeout(() => {
         const form = document.querySelector("form") as HTMLFormElement;
@@ -68,32 +105,13 @@ const SalesCart: React.FC<SalesCartProps> = ({
   }, [shorcutData]);
 
   useEffect(() => {
-    if (searchQuery) {
-      const trimmedQuery = searchQuery.toLowerCase().trim();
-      const match = trimmedQuery.match(/^(\d+(?:[.,]\d+)?)\s*[*]\s*(.+)/);
-
-      if (match) {
-        const quantity = parseFloat(match[1].replace(",", "."));
-        const productName = match[2];
-
-        setQuantityInput(quantity);
-        setProcessedQuery(productName); // este es un nuevo estado limpio sin el "3x"
-      } else {
-        setQuantityInput(1);
-        setProcessedQuery(trimmedQuery); // usamos el query tal cual si no hay x
-      }
-    }
-
-    if (inputRef.current) inputRef.current.focus();
-  }, [searchQuery]);
-
-  useEffect(() => {
     const total = selectedProducts.reduce(
-      (sum, sl) => sum + sl.product.price * sl.quantity,
+      (sum, sl) => sum + roundToNearestTen(sl.quantity * sl.product.price),
       0
     );
     setTotalSale(total);
     if (inputRef.current) inputRef.current.focus();
+    setIsSearchResultsOpen(false);
   }, [selectedProducts]);
 
   const loadData = async () => {
@@ -112,13 +130,12 @@ const SalesCart: React.FC<SalesCartProps> = ({
         "Error al cargar las categorías y grupos"
       );
     }
-
-    if (inputRef.current) inputRef.current.focus();
   };
 
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(processedQuery)
   );
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (processedQuery) {
@@ -147,9 +164,10 @@ const SalesCart: React.FC<SalesCartProps> = ({
       } else {
         setIsSearchResultsOpen(true);
       }
+      setIsSearchResultsOpen(false);
       setSearchQuery("");
       setQuantityInput(1);
-      if (onShortcutAdded) onShortcutAdded();
+      //if (onShortcutAdded) onShortcutAdded();
     }
   };
 
@@ -158,26 +176,41 @@ const SalesCart: React.FC<SalesCartProps> = ({
     setSearchQuery(query);
     if (e.target.value == "") setIsSearchResultsOpen(false);
     else setIsSearchResultsOpen(true);
+    let productToFind = "";
+    let quantity = 1;
+    const trimmedQuery = query.toLowerCase().trim();
+    const match = query.match(/^(\d*[,.]?\d+)\s*[*]\s*(.*)/);
+    if (match) {
+      quantity = parseFloat(match[1].replace(",", "."));
+      productToFind = match[2];
+
+      // este es un nuevo estado limpio sin el "3x"
+    } else {
+      productToFind = trimmedQuery; // usamos el query tal cual si no hay x
+    }
+    setProcessedQuery(productToFind);
+    setQuantityInput(quantity);
   };
 
-  const handleSelectProduct = (product: Product) => {
+  const handleSelectProduct = (product: Product, quantity?: number) => {
     const existingProduct = selectedProducts.find(
       (sp) => sp.product.id === product.id
     );
-    console.log(quantityInput);
+
+    const productQuantity = quantity ?? quantityInput;
 
     if (!existingProduct) {
       // Si no está en la lista, lo agregamos con cantidad 1
       setSelectedProducts([
         ...selectedProducts,
-        { product, quantity: quantityInput },
+        { product, quantity: productQuantity },
       ]);
     } else {
       // Si ya está, aumentamos la cantidad
       setSelectedProducts((prev) =>
         prev.map((sp) =>
           sp.product.id === product.id
-            ? { ...sp, quantity: sp.quantity + quantityInput }
+            ? { ...sp, quantity: sp.quantity + productQuantity }
             : sp
         )
       );
@@ -193,6 +226,28 @@ const SalesCart: React.FC<SalesCartProps> = ({
     setSelectedProducts(selectedProducts.filter((sp) => sp.product.id !== id));
   };
 
+  const handleAddProvisionalProduct = (productData: {
+    name: string;
+    price: number;
+    quantity: number;
+  }) => {
+    const newProductToAdd: Product = {
+      id: provisionalId,
+      name: productData.name,
+      category_id: null,
+      group_id: null,
+      price: productData.price,
+      unit_id: null,
+      quick_access: false,
+      keyboard_shortcut: "",
+    };
+    setProvisionalId((prev) => prev - 1);
+    handleSelectProduct(newProductToAdd, productData.quantity);
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  if (!isOpen) return null;
+
   return (
     <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
       {!isSearchResultsOpen && (
@@ -204,9 +259,16 @@ const SalesCart: React.FC<SalesCartProps> = ({
                   key={sp.product.id}
                   className="bg-white grid rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between">
-                    <h3 className="text-[#007566] font-medium text-lg">
-                      CÓDIGO: {sp.product.id}
-                    </h3>
+                    {sp.product.id > 0 ? (
+                      <h3 className="text-[#007566] font-medium text-lg">
+                        CÓDIGO: {sp.product.id}
+                      </h3>
+                    ) : (
+                      <h3 className="text-[#007566] font-medium text-lg">
+                        CÓDIGO: PT{Math.abs(sp.product.id)}
+                      </h3>
+                    )}
+
                     <div className="flex justify-between gap-5">
                       <button
                         onClick={() => {
@@ -260,7 +322,9 @@ const SalesCart: React.FC<SalesCartProps> = ({
                     </h3>
                     <h3 className="font-medium text-lg text-[#007566]">
                       TOTAL:{" "}
-                      {formatCurrencyChile(sp.quantity * sp.product.price)}
+                      {formatCurrencyChile(
+                        roundToNearestTen(sp.quantity * sp.product.price)
+                      )}
                     </h3>
                   </div>
                 </div>
@@ -268,7 +332,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
             </div>
           ) : (
             <p className="text-gray-600 text-center mt-4">
-              No hay productos que coincidan con la búsqueda
+              No hay productos ingresados
             </p>
           )}
         </div>
@@ -280,6 +344,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
           setSearchQuery("");
         }}
         products={filteredProducts}
+        focus={focusElement}
         onSelectProduct={handleSelectProduct}
       />
 
@@ -292,11 +357,21 @@ const SalesCart: React.FC<SalesCartProps> = ({
         </div>
         <form onSubmit={handleSearch} className="mt-4 relative" ref={formRef}>
           <input
+            autoFocus
             ref={inputRef}
             type="text"
             placeholder="Buscar por nombre o código..."
             value={searchQuery}
             onChange={handleSearchChange}
+            onKeyDown={(e) => {
+              // Solo actúa si es el input deseado (opcional, por si hay múltiples inputs similares)
+              if (e.currentTarget === inputRef.current) {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault(); // Evita comportamiento por defecto (como mover el cursor)
+                  setFocusElement(0);
+                }
+              }
+            }}
             className="w-full px-4 py-3 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-[#007566]"
           />
           <Search
@@ -316,6 +391,49 @@ const SalesCart: React.FC<SalesCartProps> = ({
             onOpenAddProducts();
           }
         }}
+        onProvisional={() => {
+          setIsProvisionalProductModalOpen(true);
+          setIsProductNotFoundModalOpen(false);
+          setSearchQuery("");
+        }}
+      />
+
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onComplete={(isComplete) => {
+          if (isComplete) {
+            setSelectedProducts([]);
+            setAlert({
+              show: true,
+              type: "success",
+              message: "Venta generadacon exito",
+              duration: 300,
+            });
+          } else
+            setAlert({
+              show: true,
+              type: "error",
+              message: `Error al agregar compra`,
+              duration: 1000,
+            });
+        }}
+        cartItems={selectedProducts}
+      />
+      {alert.show && (
+        <AlertModal
+          alertType={alert.type}
+          message={alert.message}
+          onClose={() => setAlert({ ...alert, show: false })}
+          autoClose={true}
+          duration={alert.duration}
+        />
+      )}
+
+      <ProvisionalProductModal
+        isOpen={isProvisionalProductModalOpen}
+        onClose={() => setIsProvisionalProductModalOpen(false)}
+        onAdd={handleAddProvisionalProduct}
       />
     </div>
   );

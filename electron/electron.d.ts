@@ -1,3 +1,5 @@
+import { SaleItem } from "../src/types";
+
 declare global {
   interface Window {
     electron: {
@@ -87,18 +89,14 @@ declare global {
         getSales: () => Promise<Sale[]>; // Obtiene todas las ventas
         getSaleById: (saleId: number) => Promise<Sale>; // Obtiene una venta por su ID
         getSaleItemsBySaleId: (saleId: number) => Promise<SaleItem[]>; // Obtiene los artículos de una venta por su ID
-        addSale: (sale: Sale) => Promise<Sale>; // Añade una nueva venta
+        addSale: (sale: Sale) => Promise<number>; // Añade una nueva venta
         updateSale: (sale: Sale) => Promise<Sale>; // Actualiza una venta existente
         deleteSale: (saleId: number) => Promise<void>; // Elimina una venta
         // ========================================================
         // Funciones detalladas de Ventas (Sales)
         // ========================================================
         getSaleDetailsBySaleId: (saleId: number) => Promise<SaleItem[]>; // Obtiene los detalles de una venta por su ID
-        addSaleItem: (
-          saleId: number,
-          productId: number,
-          quantity: number
-        ) => Promise<SaleItem>; // Añade un artículo a una venta
+        addSaleItem: (saleItem: SaleItem) => Promise<SaleItem>; // Añade un artículo a una venta
         updateSaleItem: (
           saleItemId: number,
           quantity: number
