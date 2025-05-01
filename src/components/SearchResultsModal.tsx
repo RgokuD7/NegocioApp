@@ -18,16 +18,16 @@ const SearchResultsModal: React.FC<SearchResultsModalProps> = ({
   onSelectProduct,
 }) => {
   const [focusElement, setFocusElement] = useState<number>(-1);
-  const elementsRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setFocusElement(focus ?? -1);
   }, [focus]);
 
   useEffect(() => {
-    if (isOpen && elementsRef.current) {
+    if (isOpen && buttonRef.current) {
       setTimeout(() => {
-        elementsRef.current?.focus();
+        buttonRef.current?.focus();
       }, 0);
     }
   }, [isOpen, products, focusElement]);
@@ -41,7 +41,7 @@ const SearchResultsModal: React.FC<SearchResultsModalProps> = ({
           <div className="grid gap-4">
             {products.map((product, index) => (
               <button
-                ref={index === focusElement ? elementsRef : null}
+                ref={index === focusElement ? buttonRef : null}
                 key={product.id}
                 onClick={() => {
                   onSelectProduct(product);

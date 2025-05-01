@@ -83,7 +83,7 @@ contextBridge.exposeInMainWorld("electron", {
     updateUnit: (unit) => ipcRenderer.invoke("update-unit", unit), // Actualizar una unidad
     deleteUnit: (id) => ipcRenderer.invoke("delete-unit", id), // Eliminar una unidad por ID
     // Ventas
-    getSales: () => ipcRenderer.invoke("get-sales"), // Obtener todas las ventas
+    getSales: (startDate, endDate) => ipcRenderer.invoke("get-sales", startDate, endDate), // Obtener todas las ventas
     addSale: (sale) => ipcRenderer.invoke("add-sale", sale), // Añadir una nueva venta
     updateSale: (sale) => ipcRenderer.invoke("update-sale", sale), // Actualizar una venta
     deleteSale: (id) => ipcRenderer.invoke("delete-sale", id), // Eliminar una venta por ID

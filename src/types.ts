@@ -28,14 +28,14 @@ export interface Barcode {
 
 export interface Supplier {
   id: number;
-  rut: string;
+  rut?: string;
   name: string;
 }
 export interface SupplierCode {
   id: number;
   supplier_id: number;
   product_id: number;
-  code: string;
+  code: number;
 }
 export interface Unit {
   id: number;
@@ -47,6 +47,8 @@ export interface Sale {
   id: number;
   total: number;
   payment_method: string | null;
+  created_at: string;
+  items?: SaleItem[] | string;
 }
 
 export interface SaleItem {

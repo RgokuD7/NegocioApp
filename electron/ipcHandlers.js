@@ -420,8 +420,8 @@ export function registerIpcHandlers(ipcMain, db) {
         );
         return {
           id: result.lastInsertRowid,
-          supplierId,
-          productId,
+          supplier_id: supplierId,
+          product_id: productId,
           code,
         };
       } catch (error) {
@@ -727,11 +727,34 @@ export function registerIpcHandlers(ipcMain, db) {
   });
 
   // Manejadores para ventas
-  ipcMain.handle("get-sales", async () => {
+  ipcMain.handle("get-sales", async (_, startDate, endDate) => {
     try {
-      return statements.getAllSales.all();
+      // Validación de fechas
+      const isValidDate = (dateStr) => !isNaN(new Date(dateStr).getTime());
+
+      console.log(startDate, endDate);
+
+      if (!isValidDate(startDate) || !isValidDate(endDate)) {
+        throw new Error("Formato de fecha inválido");
+      }
+
+      // Validación adicional
+      if (startDate > endDate) {
+        throw new Error(
+          "La fecha de inicio no puede ser mayor a la fecha final"
+        );
+      }
+
+      console.log(
+        "Consultando ventas entre (UTC ajustado por hora local):",
+        startDate,
+        "y",
+        endDate
+      );
+
+      return await statements.getSalesByDateRange.all(startDate, endDate);
     } catch (error) {
-      console.error("Error fetching sales:", error);
+      console.error("Error en get-sales:", error);
       throw new Error(`Error al obtener ventas: ${error.message}`);
     }
   });
@@ -784,7 +807,7 @@ export function registerIpcHandlers(ipcMain, db) {
   ipcMain.handle("get-sale-items-by-sale-id", async (_, saleId) => {
     try {
       validateId(saleId, "venta");
-      return statements.getSaleItemsBySaleId.all(saleId);
+      return statements.getAllSaleItemasBySaleId.all(saleId);
     } catch (error) {
       console.error("Error fetching sale items by sale ID:", error);
       throw new Error(
@@ -1181,6 +1204,33 @@ function prepareStatements(db) {
     deleteSaleItem: db.prepare(`
       DELETE FROM sale_items
       WHERE id = ?
+    `),
+    getSalesByDateRange: db.prepare(`
+      SELECT 
+        s.*,
+        json_group_array(json_object(
+          'id', si.id,
+          'product_id', si.product_id,
+          'quantity', si.quantity,
+          'price', si.price,
+          'subtotal', si.subtotal
+        )) as items
+      FROM sales s
+      LEFT JOIN sale_items si ON s.id = si.sale_id
+      WHERE datetime(s.created_at) BETWEEN datetime(?) AND datetime(?)
+      GROUP BY s.id
+      ORDER BY datetime(s.created_at) DESC
+    `),
+
+    getSalesByMonth: db.prepare(`
+      SELECT 
+        strftime('%Y-%m', created_at, 'localtime', '-4 hours') as month,
+        COUNT(*) as total_sales,
+        SUM(total) as total_amount
+      FROM sales
+      WHERE strftime('%Y', created_at, 'localtime', '-4 hours') = ?
+      GROUP BY month
+      ORDER BY month DESC
     `),
   };
 }

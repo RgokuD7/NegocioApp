@@ -1,4 +1,4 @@
-import { SaleItem } from "../src/types";
+import { SaleItem, SupplierCode } from "../src/types";
 
 declare global {
   interface Window {
@@ -48,7 +48,7 @@ declare global {
           supplierId: number,
           productId: number,
           code: string
-        ) => Promise<void>; // Añade un código de proveedor
+        ) => Promise<SupplierCode>; // Añade un código de proveedor
         updateSupplierCode: (
           id: number,
           supplierId: number,
@@ -86,7 +86,7 @@ declare global {
         // ========================================================
         // Funciones relacionadas con Ventas (Sales)
         // ========================================================
-        getSales: () => Promise<Sale[]>; // Obtiene todas las ventas
+        getSales: (startDate: string, endDate: string) => Promise<Sale[]>; // Obtiene todas las ventas
         getSaleById: (saleId: number) => Promise<Sale>; // Obtiene una venta por su ID
         getSaleItemsBySaleId: (saleId: number) => Promise<SaleItem[]>; // Obtiene los artículos de una venta por su ID
         addSale: (sale: Sale) => Promise<number>; // Añade una nueva venta

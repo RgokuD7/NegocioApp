@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { X, CheckCircle, AlertTriangle } from "lucide-react";
+
 
 interface AlertModalProps {
   alertType: "error" | "success";
@@ -20,9 +21,16 @@ const AlertModal: React.FC<AlertModalProps> = ({
   const borderColor =
     alertType === "error" ? "border-red-200" : "border-green-200";
 
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (buttonRef.current) {
+      buttonRef.current?.focus();
+    }
+  }, []);
+
   useEffect(() => {
     if (!autoClose) return;
-
     const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
   }, [autoClose, duration, onClose]);
@@ -59,6 +67,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
         {!autoClose && (
           <div className="mt-4 flex justify-end">
             <button
+              ref={buttonRef}
               onClick={onClose}
               className={`px-3 py-1.5 text-sm rounded-md ${
                 alertType === "error"

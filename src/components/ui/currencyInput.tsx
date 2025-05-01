@@ -7,6 +7,7 @@ interface CurrencyInputProps {
   onChange: (value: number) => void;
   onChangeFocus?: () => void;
   className?: string;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   isFocus?: boolean;
   placeholder?: string;
   min?: number;
@@ -22,6 +23,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   className,
   isFocus = false, // Valor por defecto
   placeholder,
+  onKeyDown,
   min,
   max,
 }) => {
@@ -72,6 +74,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
       name={name}
       value={displayValue}
       onChange={handleChange}
+      onKeyDown={onKeyDown}
       onBlur={handleBlur}
       className={className}
       placeholder={placeholder}

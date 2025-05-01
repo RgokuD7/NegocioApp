@@ -7,7 +7,15 @@ import {
   Search,
   Trash,
 } from "lucide-react";
-import { Product, Category, Group, Barcode, Unit } from "../types";
+import {
+  Product,
+  Category,
+  Group,
+  Barcode,
+  Unit,
+  SupplierCode,
+  Supplier,
+} from "../types";
 import AddCategoryModal from "./AddCategoryModal";
 import AddGroupModal from "./AddGroupModal";
 import { Combobox } from "./ui/combobox";
@@ -17,6 +25,7 @@ import SearchResultsModal from "./SearchResultsModal";
 import CurrencyInput from "./ui/currencyInput";
 import { BarcodesCombobox } from "./ui/barcodesCombobox";
 import ConfirmModal from "./ConfirmModal";
+import AddSupplierCodesModal from "./AddSupplierCodesModal";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -28,6 +37,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   onProductAdded,
 }) => {
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [isAddSupplierCodesModalOpen, setIsAddSupplierCodesModalOpen] =
+    useState(false);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [availableIds, setAvailableIds] = useState<number[]>([]);
@@ -37,7 +48,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [idInput, setIdInput] = useState<string>("");
   const [barcodeInput, setBarcodeInput] = useState<string | number>("");
-  //const [supplierCodeInput, setSupplierCodeInput] = useState<string>("");
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierCodes, setSupplierCodes] = useState<SupplierCode[]>([]);
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [productBarcodes, setProductBarcodes] = useState<Barcode[]>([]);
   const [focusPrice, setFocusPrice] = useState<boolean>(false);
@@ -45,6 +57,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isSearchResultsOpen, setIsSearchResultsOpen] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [supplerFilter, setSupplierFilter] = useState(false);
+  const [supplerSelected, setSupplierSelected] = useState(0);
   const [formData, setFormData] = useState<{
     id: number;
     name: string;
@@ -71,6 +85,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   }>({ show: false, type: "success", message: "" });
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -114,19 +129,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         productsData,
         barcodesData,
         unitsData,
+        suppliersData,
+        supplierCodesData,
       ] = await Promise.all([
         window.electron.database.getCategories(),
         window.electron.database.getGroups(),
         window.electron.database.getProducts(),
         window.electron.database.getBarcodes(),
         window.electron.database.getUnits(),
+        window.electron.database.getSuppliers(),
+        window.electron.database.getSupplierCodes(),
       ]);
       setCategories(categoriesData);
       setGroups(groupsData);
       setProducts(productsData);
       setBarcodes(barcodesData);
       setUnits(unitsData);
-      setProductData(id ? id : 1); // Cargar el producto por ID o por defecto al primero
+      setSuppliers(suppliersData);
+      setSupplierCodes(supplierCodesData);
+      setProductData(id ? id : productsData[0].id); // Cargar el producto por ID o por defecto al primero
     } catch (error) {
       console.error("Error cargando datos:", error);
       window.electron.dialog.showError(
@@ -302,7 +323,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     } // Por seguridad
     else {
       if (btn) {
-        console.log("s", currentIndex);
         if (currentIndex == 0) {
           newProductId =
             btn == 1 ? products[1].id : products[products.length - 1].id + 1;
@@ -350,7 +370,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setBarcodeInput("");
       return;
     } else {
-      console.log("xs");
       const productBarcodesData =
         await window.electron.database.getBarcodeByProductId(newProduct.id);
       if (productBarcodesData) {
@@ -358,7 +377,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         setBarcodeInput(productBarcodesData[0]?.barcode.toString() || "");
       }
       setFormData(newProduct);
-      console.log(newProduct);
       setIdInput(newProduct.id.toString()); // Actualizamos el input con el nuevo ID
     }
   };
@@ -386,7 +404,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         setIdInput("");
         handleIdChange(-1);
       } else {
-        console.log(value);
         setIdInput(numericValue);
         handleIdChange(parseInt(numericValue));
       }
@@ -414,7 +431,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         return group.id == id;
       });
       if (foundGroup) {
-        console.log(foundGroup);
         setFormData((prev) => ({
           ...prev,
           price: foundGroup.price.toString(),
@@ -432,7 +448,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       );
       const matchedId = products.find((p) => p.id === parseInt(searchQuery));
       //const isOnlyNumbers = (str: string) => /^\d+$/.test(str);
-      if (matchedBarcode) {
+      if (supplerFilter) {
+        const matchedSupplierCode = supplierCodes.find(
+          (sc) =>
+            sc.code === parseInt(searchQuery) &&
+            sc.supplier_id === supplerSelected
+        );
+        if (matchedSupplierCode) {
+          const findProductOfCode = products.find(
+            (product) => product.id === matchedSupplierCode.product_id
+          );
+          if (findProductOfCode) {
+            setIdInput(findProductOfCode.id.toString());
+            handleIdChange(findProductOfCode.id);
+            setFocusPrice(true);
+            setIsSearchResultsOpen(false);
+          }
+        }
+      } else if (matchedBarcode) {
         const foundProduct = products.find(
           (p) => p.id === matchedBarcode.product_id
         );
@@ -453,6 +486,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         );
         setFilteredProducts(foundPrducts);
         if (foundPrducts.length == 0) {
+          setIsSearchResultsOpen(false);
+          setFocusPrice(false);
           return;
         }
       }
@@ -471,7 +506,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
     if (query != "") setIsSearchResultsOpen(true);
-    else setIsSearchResultsOpen(false);
+    else {
+      setIsSearchResultsOpen(false);
+      setFocusPrice(false);
+    }
   };
 
   const handleSelectProduct = (product: Product) => {
@@ -488,7 +526,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     const existingProduct = products.find((p) => p.id === id);
     if (existingProduct) {
       try {
-        console.log("id ", id);
         await window.electron.database.deleteProduct(id);
         const filtered = products.filter((product) => product.id !== id);
         setProducts(filtered);
@@ -517,7 +554,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   };
 
   return (
-    <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-between">
+    <div className="w-2/3 bg-[#007566] p-6 flex flex-col justify-between">
       {!isSearchResultsOpen && (
         <div className=" bg-white rounded-lg w-full p-6">
           <div className="flex justify-between items-center mb-6">
@@ -541,7 +578,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               if (e.key === "Enter") {
                 e.preventDefault(); // Evita que haga submit al presionar Enter
               }
-            }}>
+            }}
+            ref={formRef}>
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -589,7 +627,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 />
               </div>
             </div>
-
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -648,7 +685,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Codigos de barra
+                  Códigos de barra
                 </label>
                 <div className="flex gap-2">
                   <BarcodesCombobox
@@ -676,29 +713,17 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
 
               <div className="flex-1">
-                {/*  <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Coidgos prooveddor
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Códigos Proveedores
                 </label>
-                <div className="flex gap-2">
-                                    <Combobox
-                    name="suplier_code"
-                    value={supplierCodeInput}
-                    onChange={handleChange}
-                    options={groups.map((group) => ({
-                      id: group.id,
-                      value: group.name,
-                    }))}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsAddGroupModalOpen(true)}
-                    className="px-3 py-2 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
-                    <Search size={20} />
-                  </button>
-                </div> */}
+                <button
+                  type="button"
+                  onClick={() => setIsAddSupplierCodesModalOpen(true)}
+                  className="px-3 py-2 bg-[#007566] text-white w-full rounded-lg hover:bg-[#006557]">
+                  Códigos Proveedores
+                </button>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -712,6 +737,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                       ...prev,
                       price: value.toString(),
                     }));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter")
+                      if (formRef.current) formRef.current.requestSubmit();
                   }}
                   isFocus={focusPrice}
                   onChangeFocus={() => setFocusPrice(false)}
@@ -764,7 +793,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                 </div>
               )} */}
             </div>
-
             <div className="flex justify-between gap-3 mt-6">
               <button
                 type="button"
@@ -802,20 +830,49 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
       {/* Search bar at the bottom */}
       <div>
-        <form onSubmit={handleSearch} className="mt-4 relative">
-          <input
-            ref={inputRef}
-            id="search"
-            type="text"
-            placeholder="Buscar por nombre o código..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full px-4 py-3 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-[#007566]"
-          />
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
+        <form onSubmit={handleSearch} className="mt-4 flex flex-col gap-1">
+          <div className="flex gap-1">
+            <div className="bg-white w-max rounded-lg flex justify-center p-1">
+              <ToggleSwitch
+                checked={supplerFilter}
+                onChange={() => setSupplierFilter((prev) => !prev)}
+                disabled={false}
+                name="supplier-filter"
+                label="Busqueda por proveedor"
+              />
+            </div>
+            {supplerFilter && (
+              <div className="bg-white w-max rounded-lg flex justify-center p-1">
+                <select
+                  name="suppliers"
+                  id="suppliers"
+                  onChange={(e) => {
+                    setSupplierSelected(parseInt(e.target.value));
+                    if (inputRef.current) inputRef.current.focus();
+                  }}>
+                  <option value={0}>Proveedor</option>
+                  {suppliers.map((supplier) => (
+                    <option value={supplier.id}>{supplier.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <input
+              ref={inputRef}
+              id="search"
+              type="text"
+              placeholder="Buscar por nombre o código..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full px-4 py-3 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-[#007566]"
+            />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+          </div>
         </form>
       </div>
       <AddCategoryModal
@@ -839,11 +896,19 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         <AlertModal
           alertType={alert.type}
           message={alert.message}
-          onClose={() => setAlert({ ...alert, show: false })}
+          onClose={() => {
+            setAlert({ ...alert, show: false });
+            if (inputRef.current) inputRef.current.focus();
+          }}
           autoClose={false}
           duration={alert.type === "success" ? 3000 : 5000}
         />
       )}
+      <AddSupplierCodesModal
+        productId={parseInt(idInput)}
+        isOpen={isAddSupplierCodesModalOpen}
+        onClose={() => setIsAddSupplierCodesModalOpen(false)}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ChevronDown, Save, Search, Trash } from "lucide-react"; // Si usas lucide-react para los íconos
+import { ChevronDown, Save, Trash } from "lucide-react"; // Si usas lucide-react para los íconos
 import { Barcode } from "../../types";
 import AlertModal from "../AlertModal";
 

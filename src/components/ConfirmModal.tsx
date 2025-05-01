@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { X, Trash2, AlertTriangle } from "lucide-react";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -25,18 +26,15 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const bgColor = danger ? "bg-red-50" : "bg-gray-50";
   const borderColor = danger ? "border-red-200" : "border-gray-200";
   const iconColor = danger ? "text-red-500" : "text-gray-500";
-  const buttonConfirmColor = danger 
-    ? "bg-red-600 hover:bg-red-700 text-white" 
+  const buttonConfirmColor = danger
+    ? "bg-red-600 hover:bg-red-700 text-white"
     : "bg-gray-600 hover:bg-gray-700 text-white";
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    
-    if (isOpen) window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onCancel]);
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onCancel();
+    }
+  });
 
   if (!isOpen) return null;
 
@@ -55,9 +53,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
           <div className="flex-1">
             <div className="flex justify-between items-start">
-              <h3 className="font-medium text-gray-900">
-                {title}
-              </h3>
+              <h3 className="font-medium text-gray-900">{title}</h3>
               <button
                 onClick={onCancel}
                 className="text-gray-400 hover:text-gray-500">

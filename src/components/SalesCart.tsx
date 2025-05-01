@@ -54,14 +54,18 @@ const SalesCart: React.FC<SalesCartProps> = ({
     }
   });
 
-  useGlobalKeyPress(" ", () => {
-    if (isOpen) {
-      // Solo responde si el SalesCart está activo
-      if (selectedProducts.length > 0) {
+  const handleInputKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); // Evita comportamiento por defecto (como mover el cursor)
+      setFocusElement(0);
+    }
+
+    if (e.key === " ") {
+      if (selectedProducts.length > 0 && searchQuery == "") {
         setIsPaymentModalOpen(true);
       }
     }
-  });
+  };
 
   useGlobalKeyPress("F5", () => {
     if (isOpen) {
@@ -183,8 +187,6 @@ const SalesCart: React.FC<SalesCartProps> = ({
     if (match) {
       quantity = parseFloat(match[1].replace(",", "."));
       productToFind = match[2];
-
-      // este es un nuevo estado limpio sin el "3x"
     } else {
       productToFind = trimmedQuery; // usamos el query tal cual si no hay x
     }
@@ -215,6 +217,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
         )
       );
     }
+    setFocusElement(-1);
   };
 
   const getUnitById = (id: number) => {
@@ -363,15 +366,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
             placeholder="Buscar por nombre o código..."
             value={searchQuery}
             onChange={handleSearchChange}
-            onKeyDown={(e) => {
-              // Solo actúa si es el input deseado (opcional, por si hay múltiples inputs similares)
-              if (e.currentTarget === inputRef.current) {
-                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  e.preventDefault(); // Evita comportamiento por defecto (como mover el cursor)
-                  setFocusElement(0);
-                }
-              }
-            }}
+            onKeyDown={handleInputKeyPress}
             className="w-full px-4 py-3 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-[#007566]"
           />
           <Search

@@ -49,6 +49,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         id: 0,
         total: totalSale,
         payment_method: "",
+        created_at: ""
       };
       const saleId = await window.electron.database.addSale(sale);
 

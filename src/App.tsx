@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import {
-  Barcode,
+  BanknoteArrowDown,
   ChevronDown,
   ChevronUp,
   Database,
   PackageSearch,
-  Settings,
-  Wrench,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import AddProductModal from "./components/AddProductModal";
 import QuickAccessModal from "./components/QuickAccessModal";
 import DatabaseTab from "./components/DatabaseTab";
 import { Product } from "./types";
 import SalesCart from "./components/SalesCart";
+import DailySalesTab from "./components/DailySalesTab";
+import SalesStatsTab from "./components/SalesStatsTab";
+import { DateRangeProvider } from "./context/DateRangeContext";
 
 /* function useGlobalKeyPress(targetKey: string, callback: () => void) {
   useEffect(() => {
@@ -70,8 +72,8 @@ const useKeyboardShortcuts = (
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [shortcutPress, setShortcutPress] = useState("");
-  const [selectedSection, setSelectedSection] = useState(""); // Estado para la sección seleccionada
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState("products"); // Estado para la sección seleccionada
+  //const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(false);
   const [quickAccessProducts, setQuickAccessProducts] = useState<Product[]>([]);
 
@@ -99,6 +101,20 @@ function App() {
   switch (selectedSection) {
     case "products":
       content = <AddProductModal isOpen={true} onProductAdded={loadData} />;
+      break;
+    case "sales":
+      content = (
+        <DateRangeProvider>
+          <DailySalesTab />
+        </DateRangeProvider>
+      );
+      break;
+    case "stats":
+      content = (
+        <DateRangeProvider>
+          <SalesStatsTab />
+        </DateRangeProvider>
+      );
       break;
     case "bd":
       content = <DatabaseTab />;
@@ -147,6 +163,20 @@ function App() {
               className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
               <PackageSearch size={24} className="mb-1" />
               <span className="font-medium">Productos</span>
+            </button>
+            <button
+              id="sales"
+              onClick={() => setSelectedSection("sales")}
+              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+              <BanknoteArrowDown size={24} className="mb-1" />
+              <span className="font-medium">Ventas</span>
+            </button>
+            <button
+              id="stats"
+              onClick={() => setSelectedSection("stats")}
+              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+              <ChartNoAxesCombined size={24} className="mb-1" />
+              <span className="font-medium">Estadisticas</span>
             </button>
             <button
               onClick={() => setSelectedSection("bd")}

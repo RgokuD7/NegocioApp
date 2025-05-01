@@ -281,6 +281,9 @@ function createTables(db) {
 
     // Índice compuesto para sale_items (sale_id y product_id)
     db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
+    `);
+    db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sale_items_sale_product
   ON sale_items (sale_id, product_id);
 `);
