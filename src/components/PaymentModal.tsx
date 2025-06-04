@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Product, Sale, SaleItem } from "../types";
 import { formatCurrencyChile, roundToNearestTen } from "../utils/utils";
 import CurrencyInput from "./ui/currencyInput";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: (isComplete: boolean) => void;
+  onComplete: (isComplete: boolean, change: number) => void;
   cartItems: { product: Product; quantity: number }[];
 }
 
@@ -20,12 +21,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [payment, setPayment] = useState<number | string>("0");
   const [change, setChange] = useState(0);
   const [totalSale, setTotalSale] = useState<number>(0);
-
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [focusPaymentInput, setFocusPaymentInput] = useState(false);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    if (isOpen) {
+      setFocusPaymentInput(true);
     }
     const total = cartItems.reduce(
       (sum, sl) => sum + roundToNearestTen(sl.product.price * sl.quantity),
@@ -34,26 +34,41 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     setTotalSale(total);
   }, [isOpen]);
 
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
+    }
+  });
+
   useEffect(() => {
     const parsedPayment = parseInt(payment.toString());
     if (parsedPayment > totalSale) {
       setChange(parsedPayment - totalSale);
+    } else {
+      setChange(0);
     }
   }, [payment]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(cartItems);
+    if (
+      payment !== "0" &&
+      payment !== "" &&
+      payment !== 0 &&
+      parseInt(payment.toString()) < totalSale
+    ) {
+      console.log("El pago es menor al total de la venta", payment);
+      return;
+    }
     try {
       const sale: Sale = {
         id: 0,
         total: totalSale,
         payment_method: "",
-        created_at: ""
+        created_at: "",
+        items: [],
       };
       const saleId = await window.electron.database.addSale(sale);
-
-      console.log(saleId);
 
       for (const cartItem of cartItems) {
         const subTotal = roundToNearestTen(
@@ -70,13 +85,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         };
 
         await window.electron.database.addSaleItem(saleItem);
-        console.log("Item agregado:", saleItem);
       }
 
-      onComplete(true);
+      onComplete(true, change);
     } catch (error) {
       console.log("err", error);
-      onComplete(false);
+      onComplete(false, 0);
     }
     setPayment("0");
     setChange(0);
@@ -118,7 +132,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 setPayment(value);
               }}
               placeholder={formatCurrencyChile(totalSale)}
-              isFocus={true}
+              isFocus={focusPaymentInput}
               className="w-full text-red-600 font-bold text-3xl rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
             />
           </div>

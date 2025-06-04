@@ -91,9 +91,9 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
           product_id,
           inputValue.toString()
         );
-        if (onBarcodeAdded) {
-          onBarcodeAdded(newBarcode);
-        }
+
+        onBarcodeAdded(newBarcode);
+
         setAlert({
           show: true,
           type: "success",
@@ -126,9 +126,9 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
     if (find) {
       try {
         await window.electron.database.deleteBarcode(find.id);
-        if (onBarcodeDeleted) {
-          onBarcodeDeleted(find.id);
-        }
+
+        onBarcodeDeleted(find.id);
+
         setInputValue("");
         setAlert({
           show: true,
@@ -193,15 +193,14 @@ const BarcodesCombobox: React.FC<BarcodesComboboxProps> = ({
           <Save size={20} />
         </button>
       )}
-      {alert.show && (
-        <AlertModal
-          alertType={alert.type}
-          message={alert.message}
-          onClose={() => setAlert({ ...alert, show: false })}
-          autoClose={false}
-          duration={alert.type === "success" ? 3000 : 5000}
-        />
-      )}
+      <AlertModal
+        isOpen={alert.show}
+        alertType={alert.type}
+        message={alert.message}
+        onClose={() => setAlert({ ...alert, show: false })}
+        autoClose={false}
+        duration={alert.type === "success" ? 3000 : 5000}
+      />
     </div>
   );
 };

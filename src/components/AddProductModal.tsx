@@ -17,7 +17,7 @@ import {
   Supplier,
 } from "../types";
 import AddCategoryModal from "./AddCategoryModal";
-import AddGroupModal from "./AddGroupModal";
+import AddEditGroupModal from "./AddEditGroupModal";
 import { Combobox } from "./ui/combobox";
 import ToggleSwitch from "./ui/switch";
 import AlertModal from "./AlertModal";
@@ -26,6 +26,7 @@ import CurrencyInput from "./ui/currencyInput";
 import { BarcodesCombobox } from "./ui/barcodesCombobox";
 import ConfirmModal from "./ConfirmModal";
 import AddSupplierCodesModal from "./AddSupplierCodesModal";
+import { GroupCombobox } from "./ui/gruopCombobox";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -55,10 +56,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const [focusPrice, setFocusPrice] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchResultsOpen, setIsSearchResultsOpen] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [supplerFilter, setSupplierFilter] = useState(false);
-  const [supplerSelected, setSupplierSelected] = useState(0);
+  const [supplierFilter, setSupplierFilter] = useState(false);
+  const [supplierSelected, setSupplierSelected] = useState(0);
   const [formData, setFormData] = useState<{
     id: number;
     name: string;
@@ -83,6 +83,26 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
     type: "error" | "success";
     message: string;
   }>({ show: false, type: "success", message: "" });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    danger: boolean;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+  }>({
+    show: false,
+    title: "¿Estás seguro?",
+    message: "",
+    confirmText: "Eliminar",
+    cancelText: "Cancelar",
+    danger: true,
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -150,9 +170,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       setProductData(id ? id : productsData[0].id); // Cargar el producto por ID o por defecto al primero
     } catch (error) {
       console.error("Error cargando datos:", error);
-      window.electron.dialog.showError(
-        "Error al cargar las categorías y grupos"
-      );
+      window.electron.dialog.showError("Error al cargar datos");
     } finally {
       setIsLoading(false);
     }
@@ -160,9 +178,31 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e?: React.FormEvent, id?: number) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e!.preventDefault();
 
+    if (parseInt(formData.price.toString()) > 70000) {
+      setConfirmModal({
+        show: true,
+        title: "Confirmar acción",
+        message:
+          "El precio del producto es muy alto. ¿Estás seguro de que deseas continuar?",
+        confirmText: "No, cancelar",
+        cancelText: "Sí, continuar",
+        danger: false,
+        onConfirm: () => {
+          return;
+        },
+        onCancel: async () => {
+          await saveProduct();
+        },
+      });
+    } else {
+      await saveProduct();
+    }
+  };
+
+  const saveProduct = async () => {
     try {
       setIsLoading(true);
 
@@ -239,7 +279,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       }
 
       // Notificación de éxito
-      const action = id ? "actualizado" : "agregado";
+      const action = foundProduct ? "actualizado" : "agregado";
       const message = `Producto ${action} correctamente`;
       //window.electron.dialog.showSuccess(`Producto ${action} correctamente`);
       setAlert({
@@ -252,13 +292,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       if (onProductAdded) {
         onProductAdded();
       }
-      loadData(parseInt(idInput));
-      return;
+      setProducts((prev) => [...prev, productData]);
+      setProductData(productData.id);
     } catch (error: any) {
       console.error("Error guardando producto:", error);
-      /* window.electron.dialog.showError(
-        error.message || "Error al guardar el producto"
-      ); */
       const errorMsg = `Error guardando producto: ${error}`;
       setAlert({
         show: true,
@@ -313,15 +350,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           newProductId = data + btn;
         } else newProductId = data;
       } else {
-        newProductId = products.length;
         setAlert({
           show: true,
           type: "error",
           message: "No se encontró ningún producto con ese ID",
         });
+        newProductId = products.length;
       }
-    } // Por seguridad
-    else {
+    } else {
       if (btn) {
         if (currentIndex == 0) {
           newProductId =
@@ -400,6 +436,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       if (parseInt(value) > products.length + 2) {
         setIdInput(products.length.toString());
         handleIdChange(products.length);
+        setAlert({
+          show: true,
+          type: "error",
+          message: "No se encontró ningún producto con ese ID",
+        });
       } else if (value == "") {
         setIdInput("");
         handleIdChange(-1);
@@ -424,7 +465,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
   const handleGroupChange = (id: number | string) => {
     setFormData((prev) => ({
       ...prev,
-      group_id: id ?? "", // Guardamos la tecla de acceso rápido
+      group_id: id,
     }));
     if (typeof id == "number") {
       const foundGroup = groups.find((group) => {
@@ -448,11 +489,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       );
       const matchedId = products.find((p) => p.id === parseInt(searchQuery));
       //const isOnlyNumbers = (str: string) => /^\d+$/.test(str);
-      if (supplerFilter) {
+      if (supplierFilter) {
         const matchedSupplierCode = supplierCodes.find(
           (sc) =>
             sc.code === parseInt(searchQuery) &&
-            sc.supplier_id === supplerSelected
+            sc.supplier_id === supplierSelected
         );
         if (matchedSupplierCode) {
           const findProductOfCode = products.find(
@@ -488,7 +529,11 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         if (foundPrducts.length == 0) {
           setIsSearchResultsOpen(false);
           setFocusPrice(false);
-          return;
+          setAlert({
+            show: true,
+            type: "error",
+            message: "No se encontró ningún producto",
+          });
         }
       }
       setSearchQuery("");
@@ -530,7 +575,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
         const filtered = products.filter((product) => product.id !== id);
         setProducts(filtered);
         handleIdChange(id, -1);
-        setShowConfirm(false);
         setAlert({
           show: true,
           type: "success",
@@ -572,7 +616,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           </div>
 
           <form
-            onSubmit={(e: React.FormEvent) => handleSubmit(e, formData.id)}
+            onSubmit={handleSubmit}
             className="space-y-4"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -639,7 +683,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     onChange={(id) => {
                       setFormData((prev) => ({
                         ...prev,
-                        category_id: id ?? "", // Guardamos la tecla de acceso rápido
+                        category_id: id ?? "",
                       }));
                     }}
                     options={categories.map((category) => ({
@@ -662,11 +706,46 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                   Grupo
                 </label>
                 <div className="flex gap-2">
-                  <Combobox
+                  <GroupCombobox
                     name="group_id"
                     value={formData.group_id ?? ""}
                     onChange={(id) => {
                       handleGroupChange(id);
+                    }}
+                    onGroupEdited={(group) => {
+                      setGroups((prev) =>
+                        prev.map((g) =>
+                          g.id === group.id
+                            ? { ...g, name: group.name, price: group.price }
+                            : g
+                        )
+                      );
+                      if (formData.group_id === group.id) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          group_id: group.id,
+                          price: group.price.toString(),
+                        }));
+                      }
+                      setAlert({
+                        show: true,
+                        type: "success",
+                        message: "Grupo guardado correctamente",
+                      });
+                    }}
+                    onGroupDeleted={(id) => {
+                      setGroups(groups.filter((group) => group.id !== id));
+                      if (formData.group_id === id) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          group_id: null,
+                        }));
+                      }
+                      setAlert({
+                        show: true,
+                        type: "success",
+                        message: "Grupo eliminado correctamente",
+                      });
                     }}
                     options={groups.map((group) => ({
                       id: group.id,
@@ -739,8 +818,12 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
                     }));
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter")
+                    if (
+                      e.key === "Enter" &&
+                      parseInt(formData.price.toString()) < 70000
+                    ) {
                       if (formRef.current) formRef.current.requestSubmit();
+                    }
                   }}
                   isFocus={focusPrice}
                   onChangeFocus={() => setFocusPrice(false)}
@@ -797,7 +880,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setShowConfirm(true);
+                  setConfirmModal({
+                    show: true,
+                    title: "Confirmar Eliminación",
+                    message:
+                      "¿Estás seguro de que quieres eliminar este producto?",
+                    confirmText: "Eliminar",
+                    cancelText: "Cancelar",
+                    danger: true,
+                    onConfirm: handleConfirmDelete,
+                  });
                 }}
                 className=" bg-white text-[#007566] border border-[#007566] hover:bg-red-700 hover:text-white hover:border-red-700 disabled:bg-gray-400 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag"
                 disabled={isLoading}>
@@ -834,14 +926,14 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
           <div className="flex gap-1">
             <div className="bg-white w-max rounded-lg flex justify-center p-1">
               <ToggleSwitch
-                checked={supplerFilter}
+                checked={supplierFilter}
                 onChange={() => setSupplierFilter((prev) => !prev)}
                 disabled={false}
                 name="supplier-filter"
                 label="Busqueda por proveedor"
               />
             </div>
-            {supplerFilter && (
+            {supplierFilter && (
               <div className="bg-white w-max rounded-lg flex justify-center p-1">
                 <select
                   name="suppliers"
@@ -878,36 +970,62 @@ const AddProductModal: React.FC<AddProductModalProps> = ({
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
-        onCategoryAdded={loadData}
+        onCategoryAdded={(category) =>
+          setCategories((prev) => [...prev, category])
+        }
       />
 
-      <AddGroupModal
+      <AddEditGroupModal
         isOpen={isAddGroupModalOpen}
         onClose={() => setIsAddGroupModalOpen(false)}
-        onGroupAdded={loadData}
+        onGroupAdded={(group) => {
+          setGroups((prev) => [...prev, group]);
+          setAlert({
+            show: true,
+            type: "success",
+            message: "Grupo agregado correctamente",
+          });
+        }}
       />
       <ConfirmModal
-        isOpen={showConfirm}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowConfirm(false)}
-        message={`¿Eliminar el producto ${formData.name} permanentemente?`}
+        isOpen={confirmModal.show}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        danger={confirmModal.danger}
+        onConfirm={() => {
+          setConfirmModal({ ...confirmModal, show: false });
+          confirmModal.onConfirm?.();
+        }}
+        onCancel={() => {
+          setConfirmModal({ ...confirmModal, show: false });
+          confirmModal.onCancel?.();
+        }}
       />
-      {alert.show && (
-        <AlertModal
-          alertType={alert.type}
-          message={alert.message}
-          onClose={() => {
-            setAlert({ ...alert, show: false });
-            if (inputRef.current) inputRef.current.focus();
-          }}
-          autoClose={false}
-          duration={alert.type === "success" ? 3000 : 5000}
-        />
-      )}
+
+      <AlertModal
+        isOpen={alert.show}
+        alertType={alert.type}
+        message={alert.message}
+        onClose={() => {
+          setAlert({ ...alert, show: false });
+          if (inputRef.current) inputRef.current.focus();
+        }}
+        autoClose={false}
+        duration={alert.type === "success" ? 3000 : 5000}
+      />
+
       <AddSupplierCodesModal
         productId={parseInt(idInput)}
         isOpen={isAddSupplierCodesModalOpen}
         onClose={() => setIsAddSupplierCodesModalOpen(false)}
+        onSupplierAdd={(supplier) =>
+          setSuppliers((prev) => [...prev, supplier])
+        }
+        onSupplierCodeAdd={(supplierCode) => {
+          setSupplierCodes((prev) => [...prev, supplierCode]);
+        }}
       />
     </div>
   );

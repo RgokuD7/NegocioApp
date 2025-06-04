@@ -29,6 +29,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [quantityInput, setQuantityInput] = useState<number>(1);
   const [totalSale, setTotalSale] = useState<number>(0);
+  const [change, setChange] = useState(0);
   const [isProductNotFoundModalOpen, setIsProductNotFoundModalOpen] =
     useState(false);
   const [isProvisionalProductModalOpen, setIsProvisionalProductModalOpen] =
@@ -74,7 +75,16 @@ const SalesCart: React.FC<SalesCartProps> = ({
     }
   });
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const focusSearchInput = () => {
+    if (searchInputRef.current) {
+      console.log("Focusing search input");
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 0);
+    }
+  };
 
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -83,10 +93,8 @@ const SalesCart: React.FC<SalesCartProps> = ({
   }, []);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
+    if (isOpen) {
+      focusSearchInput();
     }
   }, [isOpen]);
 
@@ -114,7 +122,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
       0
     );
     setTotalSale(total);
-    if (inputRef.current) inputRef.current.focus();
+    focusSearchInput();
     setIsSearchResultsOpen(false);
   }, [selectedProducts]);
 
@@ -142,13 +150,14 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    //const isOnlyNumbers = (str: string) => /^\d+$/.test(str);
+
     if (processedQuery) {
       // Buscar coincidencia con codigos de barra
       const matchedBarcode = barcodes.find(
         (b) => b.barcode === parseInt(processedQuery)
       );
       const matchedId = products.find((p) => p.id === parseInt(processedQuery));
-      //const isOnlyNumbers = (str: string) => /^\d+$/.test(str);
       if (matchedBarcode) {
         const foundProduct = products.find(
           (p) => p.id === matchedBarcode.product_id
@@ -157,6 +166,12 @@ const SalesCart: React.FC<SalesCartProps> = ({
           handleSelectProduct(foundProduct);
           setIsSearchResultsOpen(false);
         }
+      } else if (parseInt(processedQuery) < 50000) {
+        handleAddProvisionalProduct({
+          name: `Producto provisional ${Math.abs(provisionalId)}`,
+          price: parseInt(processedQuery),
+          quantity: quantityInput,
+        });
       } else if (matchedId) {
         handleSelectProduct(matchedId);
         setIsSearchResultsOpen(false);
@@ -246,7 +261,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
     };
     setProvisionalId((prev) => prev - 1);
     handleSelectProduct(newProductToAdd, productData.quantity);
-    if (inputRef.current) inputRef.current.focus();
+    focusSearchInput();
   };
 
   if (!isOpen) return null;
@@ -353,15 +368,21 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
       {/* Search bar at the bottom */}
       <div>
-        <div className="flex justify-end">
-          <h1 className="font-semibold text-right text-5xl text-[#007566]">
-            TOTAL: {formatCurrencyChile(totalSale)}
-          </h1>
+        <div className="flex flex-col justify-end">
+          {totalSale > 0 && (
+            <h2 className=" font-semibold text-right text-5xl text-[#007566]">
+              TOTAL: {formatCurrencyChile(totalSale)}
+            </h2>
+          )}
+          {change > 0 && (
+            <h1 className="font-semibold text-right text-5xl text-[#007566]">
+              VUELTO: {formatCurrencyChile(change)}
+            </h1>
+          )}
         </div>
         <form onSubmit={handleSearch} className="mt-4 relative" ref={formRef}>
           <input
-            autoFocus
-            ref={inputRef}
+            ref={searchInputRef}
             type="text"
             placeholder="Buscar por nombre o código..."
             value={searchQuery}
@@ -378,7 +399,11 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
       <ProductNotFoundModal
         isOpen={isProductNotFoundModalOpen}
-        onClose={() => setIsProductNotFoundModalOpen(false)}
+        onClose={() => {
+          setIsProductNotFoundModalOpen(false);
+          focusSearchInput();
+          setSearchQuery("");
+        }}
         searchQuery={searchQuery}
         onConfirm={() => {
           setIsProductNotFoundModalOpen(false);
@@ -395,14 +420,20 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
       <PaymentModal
         isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onComplete={(isComplete) => {
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          focusSearchInput();
+        }}
+        onComplete={(isComplete, change) => {
+          setChange(change);
           if (isComplete) {
             setSelectedProducts([]);
+            setProvisionalId(-1);
+            focusSearchInput();
             setAlert({
               show: true,
               type: "success",
-              message: "Venta generadacon exito",
+              message: "Venta generada con exito",
               duration: 300,
             });
           } else
@@ -415,19 +446,14 @@ const SalesCart: React.FC<SalesCartProps> = ({
         }}
         cartItems={selectedProducts}
       />
-      {alert.show && (
-        <AlertModal
-          alertType={alert.type}
-          message={alert.message}
-          onClose={() => setAlert({ ...alert, show: false })}
-          autoClose={true}
-          duration={alert.duration}
-        />
-      )}
 
       <ProvisionalProductModal
         isOpen={isProvisionalProductModalOpen}
-        onClose={() => setIsProvisionalProductModalOpen(false)}
+        onClose={() => {
+          setIsProvisionalProductModalOpen(false);
+          focusSearchInput();
+          setSearchQuery("");
+        }}
         onAdd={handleAddProvisionalProduct}
       />
     </div>

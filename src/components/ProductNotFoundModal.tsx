@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 interface ProductNotFoundModalProps {
   isOpen: boolean;
@@ -25,6 +26,12 @@ const ProductNotFoundModal: React.FC<ProductNotFoundModalProps> = ({
       }, 0);
     }
   }, [isOpen]);
+
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
+    }
+  });
 
   if (!isOpen) return null;
 

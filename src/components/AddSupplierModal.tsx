@@ -6,7 +6,7 @@ import { Supplier } from "../types";
 interface AddSupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (supplier: { id: number; name: string; rut?: string }) => void;
+  onAdd: (supplier: Supplier) => void;
 }
 
 const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
@@ -48,7 +48,6 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
         (sup) => sup.name.toLowerCase() === formData.name.toLowerCase().trim()
       );
       const findIfRutExist = suppliers.find((sup) => sup.rut === formData.rut);
-      console.log(findIfRutExist);
       if (!finIfSupplierExist) {
         if (!findIfRutExist) {
           const newSupplier = await window.electron.database.addSupplier(
@@ -153,15 +152,15 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
           </div>
         </form>
       </div>
-      {alert.show && (
-        <AlertModal
-          alertType={alert.type}
-          message={alert.message}
-          onClose={() => setAlert({ ...alert, show: false })}
-          autoClose={false}
-          duration={alert.type === "success" ? 3000 : 5000}
-        />
-      )}
+
+      <AlertModal
+        isOpen={alert.show}
+        alertType={alert.type}
+        message={alert.message}
+        onClose={() => setAlert({ ...alert, show: false })}
+        autoClose={false}
+        duration={alert.type === "success" ? 3000 : 5000}
+      />
     </div>
   );
 };

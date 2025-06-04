@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   BanknoteArrowDown,
   ChevronDown,
-  ChevronUp,
   Database,
   PackageSearch,
   ChartNoAxesCombined,
@@ -15,6 +14,8 @@ import SalesCart from "./components/SalesCart";
 import DailySalesTab from "./components/DailySalesTab";
 import SalesStatsTab from "./components/SalesStatsTab";
 import { DateRangeProvider } from "./context/DateRangeContext";
+import { AnimatePresence, motion } from "framer-motion";
+import { formatCurrencyChile } from "./utils/utils";
 
 /* function useGlobalKeyPress(targetKey: string, callback: () => void) {
   useEffect(() => {
@@ -103,18 +104,10 @@ function App() {
       content = <AddProductModal isOpen={true} onProductAdded={loadData} />;
       break;
     case "sales":
-      content = (
-        <DateRangeProvider>
-          <DailySalesTab />
-        </DateRangeProvider>
-      );
+      content = <DailySalesTab />;
       break;
     case "stats":
-      content = (
-        <DateRangeProvider>
-          <SalesStatsTab />
-        </DateRangeProvider>
-      );
+      content = <SalesStatsTab />;
       break;
     case "bd":
       content = <DatabaseTab />;
@@ -129,83 +122,101 @@ function App() {
   }
 
   return (
-    <div className="flex min-h-screen max-h-screen select-none">
-      {/* Left Section - 1/3 width */}
-      <div className="w-1/3 bg-[#007566] p-6 flex flex-col">
-        {/* Quick Access buttons */}
-        {!isMenuOpen && (
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            {quickAccessProducts.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => setShortcutPress(product.id.toString())}
-                className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-                <span className="font-medium">{product.name}</span>
-                <span className="text-sm opacity-80">{product.id}</span>
-                {product.keyboard_shortcut != "" ? (
-                  <span className="text-sm opacity-80">
-                    {product.keyboard_shortcut}
-                  </span>
-                ) : (
-                  <></>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Menú desplegable con opciones */}
-        {isMenuOpen && (
-          <div className="grid grid-cols-1 gap-3 mt-4">
-            <button
-              id="products"
-              onClick={() => setSelectedSection("products")}
-              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-              <PackageSearch size={24} className="mb-1" />
-              <span className="font-medium">Productos</span>
-            </button>
-            <button
-              id="sales"
-              onClick={() => setSelectedSection("sales")}
-              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-              <BanknoteArrowDown size={24} className="mb-1" />
-              <span className="font-medium">Ventas</span>
-            </button>
-            <button
-              id="stats"
-              onClick={() => setSelectedSection("stats")}
-              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-              <ChartNoAxesCombined size={24} className="mb-1" />
-              <span className="font-medium">Estadisticas</span>
-            </button>
-            <button
-              onClick={() => setSelectedSection("bd")}
-              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
-              <Database size={24} className="mb-1" />
-              <span className="font-medium">Base de datos</span>
-            </button>
-            {/* Aquí puedes agregar más botones según las opciones que quieras */}
-          </div>
-        )}
-
-        <button
-          id="menu"
-          onClick={() => {
-            setIsMenuOpen(!isMenuOpen); // Cambia el estado de visibilidad del menú
-          }}
-          className="mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag">
-          {isMenuOpen ? (
-            <ChevronUp size={20} /> // Flecha hacia arriba cuando el menú está abierto
-          ) : (
-            <ChevronDown size={20} /> // Flecha hacia abajo cuando el menú está cerrado
+    <DateRangeProvider>
+      <div className="flex min-h-screen max-h-screen select-none">
+        {/* Left Section - 1/3 width */}
+        <div className="w-1/3 bg-[#007566] p-6 flex flex-col">
+          {/* Quick Access buttons */}
+          {!isMenuOpen && (
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }} // Afecta todas las animaciones
+                className="grid grid-cols-3 gap-2 mt-4">
+                {quickAccessProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => setShortcutPress(product.id.toString())}
+                    className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+                    <span className="font-medium">{product.name}</span>
+                    <span className="text-sm opacity-70">{product.id}</span>
+                    <span className="text-sm opacity-40">
+                      {formatCurrencyChile(product.price)}
+                    </span>
+                    {product.keyboard_shortcut != "" ? (
+                      <span className="text-sm opacity-80">
+                        {product.keyboard_shortcut}
+                      </span>
+                    ) : (
+                      <></>
+                    )}
+                  </button>
+                ))}
+              </motion.div>
+            </AnimatePresence>
           )}
-          {isMenuOpen ? "Cerrar Menú" : "Menú"}
-        </button>
-      </div>
 
-      {/* Right Section - 2/3 width */}
+          {/* Menú desplegable con opciones */}
+          {isMenuOpen && (
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }} // Afecta todas las animaciones
+                className="grid grid-cols-1 gap-3 mt-4">
+                <button
+                  id="products"
+                  onClick={() => setSelectedSection("products")}
+                  className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+                  <PackageSearch size={24} className="mb-1" />
+                  <span className="font-medium">Productos</span>
+                </button>
+                <button
+                  id="sales"
+                  onClick={() => setSelectedSection("sales")}
+                  className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+                  <BanknoteArrowDown size={24} className="mb-1" />
+                  <span className="font-medium">Ventas</span>
+                </button>
+                <button
+                  id="stats"
+                  onClick={() => setSelectedSection("stats")}
+                  className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+                  <ChartNoAxesCombined size={24} className="mb-1" />
+                  <span className="font-medium">Estadisticas</span>
+                </button>
+                <button
+                  onClick={() => setSelectedSection("bd")}
+                  className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
+                  <Database size={24} className="mb-1" />
+                  <span className="font-medium">Base de datos</span>
+                </button>
+                {/* Aquí puedes agregar más botones según las opciones que quieras */}
+              </motion.div>
+            </AnimatePresence>
+          )}
 
-      {!isMenuOpen && (
+          <button
+            id="menu"
+            onClick={() => {
+              setIsMenuOpen(!isMenuOpen); // Cambia el estado de visibilidad del menú
+            }}
+            className="mt-auto bg-white text-[#007566] hover:bg-gray-100 transition-colors duration-200 py-3 px-6 rounded-lg flex items-center justify-center gap-2 font-medium no-drag">
+            {isMenuOpen ? "Cerrar Menú" : "Menú"}
+            <ChevronDown
+              className={`transform transition-transform ${
+                isMenuOpen ? "rotate-180" : ""
+              }`}
+              size={20}
+            />
+          </button>
+        </div>
+
+        {/* Right Section - 2/3 width */}
+
         <SalesCart
           isOpen={!isMenuOpen}
           onOpenAddProducts={() => {
@@ -215,18 +226,17 @@ function App() {
           onShortcutAdded={() => setShortcutPress("")}
           shorcutData={shortcutPress}
         />
-      )}
 
-      {isMenuOpen && content}
+        {isMenuOpen && content}
 
-      {/* Modals */}
+        {/* Modals */}
 
-      <QuickAccessModal
-        isOpen={isQuickAccessOpen}
-        onClose={() => setIsQuickAccessOpen(false)}
-        onQuickAccesAdded={loadData}
-      />
-      {/* 
+        <QuickAccessModal
+          isOpen={isQuickAccessOpen}
+          onClose={() => setIsQuickAccessOpen(false)}
+          onQuickAccesAdded={loadData}
+        />
+        {/* 
       <SearchResultsModal
         isOpen={isSearchResultsOpen}
         onClose={() => {
@@ -236,7 +246,8 @@ function App() {
         products={filteredProducts}
         onSelectProduct={handleSelectProduct}
       /> */}
-    </div>
+      </div>
+    </DateRangeProvider>
   );
 }
 

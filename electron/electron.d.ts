@@ -11,6 +11,8 @@ declare global {
         addCategory: (name: string) => Promise<Category>; // Agrega una categoría
         getGroups: () => Promise<Group[]>; // Obtiene los grupos
         addGroup: (name: string, price: number) => Promise<Group>; // Agrega un grupo
+        updateGroup: (id: number, name: string, price: number) => Promise<Group>; // Actualiza un grupo
+        deleteGroup: (id: number) => Promise<{ success: boolean }>; // Elimina un grupo
 
         // ========================================================
         // Funciones relacionadas con Códigos de Barras (Barcodes)
@@ -47,7 +49,7 @@ declare global {
         addSupplierCode: (
           supplierId: number,
           productId: number,
-          code: string
+          code: number
         ) => Promise<SupplierCode>; // Añade un código de proveedor
         updateSupplierCode: (
           id: number,

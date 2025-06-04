@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
+import { Category } from "../types";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 interface AddCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCategoryAdded?: () => void;
+  onCategoryAdded: (category: Category) => void;
 }
 
 const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
@@ -14,20 +16,26 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
 }) => {
   const [categoryName, setCategoryName] = useState("");
 
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
+    }
+  });
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!categoryName) {
-      alert('Por favor, ingresa un nombre para la categoría');
+      alert("Por favor, ingresa un nombre para la categoría");
       return;
     }
 
     try {
       const category: string = categoryName.trim();
 
-      await window.electron.database.addCategory(category);
+      const newCategory = await window.electron.database.addCategory(category);
 
       // Notificación de éxito
       window.electron.dialog.showSuccess("Categoria guardada correctamente");
@@ -35,10 +43,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
       // Reset form
       setCategoryName("");
 
-      // Notificar que se añadió un producto (para actualizar listas, etc.)
-      if (onCategoryAdded) {
-        onCategoryAdded();
-      }
+      onCategoryAdded(newCategory);
 
       onClose();
     } catch (error: any) {

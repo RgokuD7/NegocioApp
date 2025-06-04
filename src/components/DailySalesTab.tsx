@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar } from "lucide-react";
-import { Sale } from "../types";
+import { Calendar, ChevronDown } from "lucide-react";
+import { Product, Sale, Unit } from "../types";
 import { useDateRange } from "../context/DateRangeContext";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { es } from "date-fns/locale/es";
 import {
@@ -18,12 +19,35 @@ const DailySalesTab = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const { dateRange, setDateRange } = useDateRange();
   const [startDate, endDate] = dateRange;
+  const [expandedSaleIds, setExpandedSaleIds] = useState<number[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
 
   useEffect(() => {
     if (dateRange[0] && dateRange[1]) {
       fetchSales();
     }
   }, [dateRange]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const productsData = await window.electron.database.getProducts();
+      const unitsData = await window.electron.database.getUnits();
+      setProducts(productsData);
+      setUnits(unitsData);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      window.electron.dialog.showError("Error al cargar productos");
+    }
+  };
+
+  const getProductWithId = (id: number) => {
+    return products.find((product) => product.id === id);
+  };
 
   const totalSales = sales.reduce((acc, sale) => acc + sale.total, 0);
 
@@ -50,7 +74,7 @@ const DailySalesTab = () => {
         return {
           ...sale,
           created_at: localDate.toLocaleString(),
-          items: parseSaleItems(sale.items!.toString()),
+          items: parseSaleItems(sale.items.toString()),
         };
       });
 
@@ -61,6 +85,19 @@ const DailySalesTab = () => {
       // Opcional: Mostrar notificación al usuario
       alert("Error al cargar ventas. Intente nuevamente.");
     }
+  };
+
+  const toggleSale = (saleId: number) => {
+    setExpandedSaleIds(
+      (prev) =>
+        prev.includes(saleId)
+          ? prev.filter((id) => id !== saleId) // Remover si ya está
+          : [...prev, saleId] // Agregar si no está
+    );
+  };
+
+  const getUnitById = (id: number) => {
+    return units.find((u) => u.id === id);
   };
 
   return (
@@ -109,7 +146,10 @@ const DailySalesTab = () => {
 
         <div className="space-y-4 max-h-[50vh] overflow-y-auto">
           {sales.map((sale) => (
-            <div key={sale.id} className="bg-white/10 p-4 rounded-lg space-y-2">
+            <div
+              key={sale.id}
+              className="bg-white/10 p-4 rounded-lg space-y-2"
+              onClick={() => toggleSale(sale.id)}>
               <div className="flex text-white justify-between items-start">
                 <span className="font-medium">
                   {formatRelativeDate(sale.created_at)}
@@ -117,11 +157,49 @@ const DailySalesTab = () => {
                 <span className="text-lg font-semibold">
                   {formatCurrencyChile(sale.total)}
                 </span>
+                <ChevronDown
+                  className={`transform transition-transform ${
+                    expandedSaleIds.includes(sale.id) ? "rotate-180" : ""
+                  }`}
+                  size={20}
+                />
               </div>
               <div className="text-sm text-white/80">
-                {sale.items?.length}{" "}
-                {sale.items?.length == 1 ? "producto" : "productos"}
+                {sale.items.length}{" "}
+                {sale.items.length == 1 ? "producto" : "productos"}
               </div>
+              <AnimatePresence>
+                {expandedSaleIds.includes(sale.id) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }} // Afecta todas las animaciones
+                    className="mt-2 ml-4 space-y-2 border-l-2 border-white/20 pl-4">
+                    {sale.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex justify-between text-white/80 text-sm">
+                        <span>
+                          {item.quantity}
+                          {" x "}
+                          {getProductWithId(item.product_id ?? 0)?.name ??
+                            "Producto Temporal"}
+                          {` (${formatCurrencyChile(item.price)}${
+                            getProductWithId(item.product_id ?? 0)?.unit_id
+                              ? getUnitById(
+                                  getProductWithId(item.product_id ?? 0)
+                                    ?.unit_id ?? 0
+                                )?.price_unit || ""
+                              : ""
+                          })`}
+                        </span>
+                        <span>{formatCurrencyChile(item.subtotal)}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>

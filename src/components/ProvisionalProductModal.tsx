@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import CurrencyInput from "./ui/currencyInput";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 interface ProvisionalProductModalProps {
   isOpen: boolean;
@@ -28,6 +29,12 @@ const ProvisionalProductModal: React.FC<ProvisionalProductModalProps> = ({
     }
   }, [isOpen]);
 
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
+    }
+  });
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -50,7 +57,7 @@ const ProvisionalProductModal: React.FC<ProvisionalProductModalProps> = ({
       <div className="bg-white rounded-lg w-full max-w-md p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">
-            Registro Provisional
+            Registro provisional
           </h2>
           <button
             onClick={onClose}

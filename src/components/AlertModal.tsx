@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { X, CheckCircle, AlertTriangle } from "lucide-react";
+import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
 
 interface AlertModalProps {
+  isOpen: boolean;
   alertType: "error" | "success";
   message: string;
   onClose: () => void;
@@ -11,6 +13,7 @@ interface AlertModalProps {
 }
 
 const AlertModal: React.FC<AlertModalProps> = ({
+  isOpen,
   alertType,
   message,
   onClose,
@@ -21,19 +24,21 @@ const AlertModal: React.FC<AlertModalProps> = ({
   const borderColor =
     alertType === "error" ? "border-red-200" : "border-green-200";
 
-  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (buttonRef.current) {
-      buttonRef.current?.focus();
+
+  useGlobalKeyPress("Escape", () => {
+    if (isOpen) {
+      onClose();
     }
-  }, []);
+  });
 
   useEffect(() => {
     if (!autoClose) return;
     const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
   }, [autoClose, duration, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[1000]">
@@ -67,7 +72,6 @@ const AlertModal: React.FC<AlertModalProps> = ({
         {!autoClose && (
           <div className="mt-4 flex justify-end">
             <button
-              ref={buttonRef}
               onClick={onClose}
               className={`px-3 py-1.5 text-sm rounded-md ${
                 alertType === "error"

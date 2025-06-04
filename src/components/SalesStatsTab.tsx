@@ -1,86 +1,123 @@
-import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Package, DollarSign, Calendar, ChevronDown } from 'lucide-react';
-import { Sale, Product } from '../types';
+import { useEffect, useState } from "react";
+import {
+  BarChart3,
+  TrendingUp,
+  Package,
+  DollarSign,
+  Calendar,
+} from "lucide-react";
+
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { Product, Sale, Unit } from "../types";
+import { useDateRange } from "../context/DateRangeContext";
+
+import { es } from "date-fns/locale/es";
+import {
+  formatCurrencyChile,
+  parseSaleItems,
+  utcToLocal,
+} from "../utils/utils";
+registerLocale("es", es);
 
 interface ProductStat {
-  product: Product;
+  product?: Product;
   quantity: number;
   total: number;
 }
 
 const SalesStatsTab = () => {
-  const [dateFilter, setDateFilter] = useState<'day' | 'month' | 'year'>('day');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const sales: Sale[] = []; // Aquí se cargarían las ventas según el filtro
+  const [sales, setSales] = useState<Sale[]>([]);
+  const { dateRange, setDateRange } = useDateRange();
+  const [startDate, endDate] = dateRange;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
 
-  // Estadísticas calculadas
-  const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
-  const averageSale = sales.length > 0 ? totalRevenue / sales.length : 0;
-  const largestSale = sales.reduce((max, sale) => Math.max(max, sale.total), 0);
+  useEffect(() => {
+    if (dateRange[0] && dateRange[1]) {
+      fetchSales();
+    }
+  }, [dateRange]);
 
-  const formatDate = (date: Date) => {
-    switch (dateFilter) {
-      case 'day':
-        return date.toLocaleDateString();
-      case 'month':
-        return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-      case 'year':
-        return date.getFullYear().toString();
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const productsData = await window.electron.database.getProducts();
+      const unitsData = await window.electron.database.getUnits();
+      setProducts(productsData);
+      setUnits(unitsData);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+      window.electron.dialog.showError("Error al cargar productos");
     }
   };
 
-  const handlePreviousDate = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      switch (dateFilter) {
-        case 'day':
-          newDate.setDate(prev.getDate() - 1);
-          break;
-        case 'month':
-          newDate.setMonth(prev.getMonth() - 1);
-          break;
-        case 'year':
-          newDate.setFullYear(prev.getFullYear() - 1);
-          break;
-      }
-      return newDate;
-    });
+  const getProductWithId = (id: number) => {
+    return products.find((product) => product.id === id);
   };
 
-  const handleNextDate = () => {
-    setSelectedDate(prev => {
-      const newDate = new Date(prev);
-      switch (dateFilter) {
-        case 'day':
-          newDate.setDate(prev.getDate() + 1);
-          break;
-        case 'month':
-          newDate.setMonth(prev.getMonth() + 1);
-          break;
-        case 'year':
-          newDate.setFullYear(prev.getFullYear() + 1);
-          break;
-      }
-      return newDate;
-    });
+  const fetchSales = async () => {
+    try {
+      const startOfDayLocal = startDate;
+      startOfDayLocal!.setHours(0, 0, 0, 0);
+      const endOfDayLocal = endDate;
+      endOfDayLocal!.setHours(23, 59, 59, 999);
+
+      console.log("inicio", startOfDayLocal!.toISOString());
+      console.log("fin", endOfDayLocal!.toISOString());
+
+      const salesData: Sale[] = await window.electron.database.getSales(
+        startOfDayLocal!.toISOString(),
+        endOfDayLocal!.toISOString()
+      );
+
+      const adjustedSales = salesData.map((sale: Sale) => {
+        const utcDate = new Date(sale.created_at);
+
+        const localDate = utcToLocal(utcDate);
+
+        return {
+          ...sale,
+          created_at: localDate.toLocaleString(),
+          items: parseSaleItems(sale.items.toString()),
+        };
+      });
+
+      setSales(adjustedSales);
+      console.log(adjustedSales);
+    } catch (error) {
+      console.error("Error al obtener ventas:", error);
+      // Opcional: Mostrar notificación al usuario
+      alert("Error al cargar ventas. Intente nuevamente.");
+    }
   };
+
+  // Estadísticas calculadas
+  const totalSales = sales.reduce((acc, sale) => acc + sale.total, 0);
+  const averageSale = sales.length > 0 ? totalSales / sales.length : 0;
+  const largestSale = sales.reduce((max, sale) => Math.max(max, sale.total), 0);
 
   // Productos más vendidos
   const productStats: ProductStat[] = [];
-  sales.forEach(sale => {
-/*     salesItems.forEach(item => {
-      const existingStat = productStats.find(stat => stat.product.id === item.id);
+  sales.forEach((sale) => {
+    sale.items.forEach((item) => {
+      const existingStat = productStats.find(
+        (stat) => stat.product?.id === item.id
+      );
       if (existingStat) {
         existingStat.quantity += item.quantity;
         existingStat.total += item.subtotal;
       } else {
         productStats.push({
-          product: item,
+          product: getProductWithId(item.product_id ?? 0),
           quantity: item.quantity,
-          total: item.subtotal
+          total: item.subtotal,
         });
       }
-    }); */
+    });
   });
 
   const topProducts = [...productStats]
@@ -92,103 +129,121 @@ const SalesStatsTab = () => {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between bg-white/10 p-4 rounded-lg">
-        <div className="flex items-center gap-4">
-          <Calendar size={24} className="text-white/80" />
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value as 'day' | 'month' | 'year')}
-            className="bg-transparent text-white border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/30"
-          >
-            <option value="day" className="text-gray-900">Por día</option>
-            <option value="month" className="text-gray-900">Por mes</option>
-            <option value="year" className="text-gray-900">Por año</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePreviousDate}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <ChevronDown size={20} className="rotate-90" />
-          </button>
-          <span className="text-lg font-medium min-w-[150px] text-center">
-            {formatDate(selectedDate)}
-          </span>
-          <button
-            onClick={handleNextDate}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          >
-            <ChevronDown size={20} className="-rotate-90" />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white/10 p-6 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <BarChart3 size={24} className="text-white/80" />
-            <h3 className="text-lg font-medium">Ingresos totales</h3>
+    <div className="w-2/3 bg-[#007566] p-6 flex flex-col justify-between overflow-y-auto">
+      <div className=" bg-white/10 rounded-lg w-full p-6 flex flex-col gap-3">
+        <div className="flex items-center justify-between bg-white/10 p-4 rounded-lg">
+          <div className="flex items-center gap-4 w-full">
+            <Calendar size={24} className="text-white/80" />
+            <DatePicker
+              selectsRange={true}
+              startDate={startDate}
+              endDate={endDate}
+              onChange={(dateRange) => {
+                setDateRange(dateRange);
+              }}
+              maxDate={new Date()} // Máximo hoy
+              locale={"es"}
+              isClearable={true}
+              showMonthDropdown={true}
+              showYearDropdown={true}
+              dropdownMode={"select"}
+              className="bg-transparent w-full text-white border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/30"
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Seleccionar fechas"
+            />
           </div>
-          <p className="text-3xl font-bold">${totalRevenue.toFixed(2)}</p>
         </div>
 
-        <div className="bg-white/10 p-6 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <TrendingUp size={24} className="text-white/80" />
-            <h3 className="text-lg font-medium">Venta promedio</h3>
+        <div className="grid grid-cols-2 gap-4 text-white">
+          <div className="bg-white/10 p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <BarChart3 size={24} />
+              <h3 className="text-lg font-medium">Ingresos totales</h3>
+            </div>
+            <p className="text-3xl font-bold">
+              {formatCurrencyChile(totalSales)}
+            </p>
           </div>
-          <p className="text-3xl font-bold">${averageSale.toFixed(2)}</p>
-        </div>
 
-        <div className="bg-white/10 p-6 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <Package size={24} className="text-white/80" />
-            <h3 className="text-lg font-medium">Total productos</h3>
+          <div className="bg-white/10 p-6 rounded-l">
+            <div className="flex items-center gap-3 mb-3">
+              <TrendingUp size={24} />
+              <h3 className="text-lg font-medium">Venta promedio</h3>
+            </div>
+            <p className="text-3xl font-bold">
+              {formatCurrencyChile(averageSale)}
+            </p>
           </div>
-          <p className="text-3xl font-bold">
-{/*             {sales.reduce((acc, sale) => acc + sale.items.reduce((sum, item) => sum + item.quantity, 0), 0)} */}
-          </p>
-        </div>
 
-        <div className="bg-white/10 p-6 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <DollarSign size={24} className="text-white/80" />
-            <h3 className="text-lg font-medium">Venta más alta</h3>
+          <div className="bg-white/10 p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <Package size={24} />
+              <h3 className="text-lg font-medium">Total productos</h3>
+            </div>
+            <p className="text-3xl font-bold">
+              {sales.reduce(
+                (acc, sale) =>
+                  acc +
+                  sale.items.reduce((sum, item) => sum + item.quantity, 0),
+                0
+              )}
+            </p>
           </div>
-          <p className="text-3xl font-bold">${largestSale.toFixed(2)}</p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white/10 p-6 rounded-lg">
-          <h3 className="text-xl font-medium mb-4">Productos más vendidos</h3>
-          <div className="space-y-4">
-            {topProducts.map((stat, index) => (
-              <div key={stat.product.id} className="flex items-center gap-4">
-                <span className="text-2xl font-bold text-white/50">#{index + 1}</span>
-                <div className="flex-1">
-                  <p className="font-medium">{stat.product.name}</p>
-                  <p className="text-sm text-white/70">{stat.quantity} unidades</p>
+          <div className="bg-white/10 p-6 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <DollarSign size={24} />
+              <h3 className="text-lg font-medium">Venta más alta</h3>
+            </div>
+            <p className="text-3xl font-bold">
+              {formatCurrencyChile(largestSale)}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 text-white">
+          <div className="bg-white/10 p-6 rounded-lg">
+            <h3 className="text-xl font-medium mb-4">Productos más vendidos</h3>
+            <div className="space-y-4">
+              {topProducts.map((stat, index) => (
+                <div key={index} className="flex items-center gap-4">
+                  <span className="text-2xl font-bold text-white/50">
+                    #{index + 1}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {stat.product?.name ?? "Producto Temporal"}
+                    </p>
+                    <p className="text-sm text-white/70">
+                      {`${stat.quantity} ${
+                        stat.quantity > 1 ? "unidades" : "unidad"
+                      }`}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-white/10 p-6 rounded-lg">
-          <h3 className="text-xl font-medium mb-4">Mayor ingreso</h3>
-          <div className="space-y-4">
-            {topRevenueProducts.map((stat, index) => (
-              <div key={stat.product.id} className="flex items-center gap-4">
-                <span className="text-2xl font-bold text-white/50">#{index + 1}</span>
-                <div className="flex-1">
-                  <p className="font-medium">{stat.product.name}</p>
-                  <p className="text-sm text-white/70">${stat.total.toFixed(2)}</p>
+          <div className="bg-white/10 p-6 rounded-lg">
+            <h3 className="text-xl font-medium mb-4">Mayor ingreso</h3>
+            <div className="space-y-4">
+              {topRevenueProducts.map((stat, index) => (
+                <div key={index} className="flex items-center gap-4">
+                  <span className="text-2xl font-bold text-white/50">
+                    #{index + 1}
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {stat.product?.name ?? "Producto Temporal"}
+                    </p>
+                    <p className="text-sm text-white/70">
+                      {formatCurrencyChile(stat.total)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

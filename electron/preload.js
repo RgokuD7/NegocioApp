@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld("electron", {
     // Grupos
     getGroups: () => ipcRenderer.invoke("get-groups"), // Obtener todos los grupos
     addGroup: (name, price) => ipcRenderer.invoke("add-group", name, price), // Añadir un nuevo grupo
+    updateGroup: (id, name, price) =>
+      ipcRenderer.invoke("update-group", id, name, price), // Actualizar un grupo
+    deleteGroup: (id) => ipcRenderer.invoke("delete-group", id), // Eliminar un grupo por ID
 
     // Codigos de barras
     getBarcodes: () => ipcRenderer.invoke("get-barcodes"), // Obtener todos los códigos de barras
@@ -83,7 +86,8 @@ contextBridge.exposeInMainWorld("electron", {
     updateUnit: (unit) => ipcRenderer.invoke("update-unit", unit), // Actualizar una unidad
     deleteUnit: (id) => ipcRenderer.invoke("delete-unit", id), // Eliminar una unidad por ID
     // Ventas
-    getSales: (startDate, endDate) => ipcRenderer.invoke("get-sales", startDate, endDate), // Obtener todas las ventas
+    getSales: (startDate, endDate) =>
+      ipcRenderer.invoke("get-sales", startDate, endDate), // Obtener todas las ventas
     addSale: (sale) => ipcRenderer.invoke("add-sale", sale), // Añadir una nueva venta
     updateSale: (sale) => ipcRenderer.invoke("update-sale", sale), // Actualizar una venta
     deleteSale: (id) => ipcRenderer.invoke("delete-sale", id), // Eliminar una venta por ID

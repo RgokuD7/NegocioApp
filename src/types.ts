@@ -48,7 +48,7 @@ export interface Sale {
   total: number;
   payment_method: string | null;
   created_at: string;
-  items?: SaleItem[] | string;
+  items: SaleItem[];
 }
 
 export interface SaleItem {

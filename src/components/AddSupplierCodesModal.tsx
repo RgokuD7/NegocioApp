@@ -9,12 +9,16 @@ interface AddSupplierCodesModalProps {
   isOpen: boolean;
   onClose: () => void;
   productId: number;
+  onSupplierAdd: (supplier: Supplier) => void;
+  onSupplierCodeAdd: (supplierCode: SupplierCode) => void;
 }
 
 const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
   isOpen,
   onClose,
   productId,
+  onSupplierAdd,
+  onSupplierCodeAdd,
 }) => {
   const [selectedSupplierId, setSelectedSupplierId] = useState<number>(0);
   const [newCode, setNewCode] = useState("");
@@ -38,7 +42,6 @@ const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
 
   const loadData = async () => {
     try {
-      console.log(productId);
       const [
         suppliersData,
         productCodesSuppliersData,
@@ -64,7 +67,7 @@ const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
   };
 
   useGlobalKeyPress("Escape", () => {
-    if (isOpen) {
+    if (isOpen && !alert.show) {
       onClose();
     }
   });
@@ -84,9 +87,10 @@ const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
             await window.electron.database.addSupplierCode(
               selectedSupplierId,
               productId,
-              newCode
+              parseInt(newCode)
             );
           setProductSupplierCodes((prev) => [...prev, newSupplierCode]);
+          onSupplierCodeAdd(newSupplierCode);
           setAlert({
             show: true,
             type: "success",
@@ -130,7 +134,8 @@ const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
     rut?: string;
   }) => {
     try {
-      setSuppliers([...suppliers, supplier]);
+      setSuppliers((prev) => [...prev, supplier]);
+      onSupplierAdd(supplier);
       setAlert({
         show: true,
         type: "success",
@@ -250,15 +255,16 @@ const AddSupplierCodesModal: React.FC<AddSupplierCodesModalProps> = ({
           </div>
         </div>
       </div>
-      {alert.show && (
+
         <AlertModal
+          isOpen={alert.show}
           alertType={alert.type}
           message={alert.message}
           onClose={() => setAlert({ ...alert, show: false })}
           autoClose={false}
           duration={alert.type === "success" ? 3000 : 5000}
         />
-      )}
+
       <AddSupplierModal
         isOpen={isAddSupplierModalOpen}
         onClose={() => {

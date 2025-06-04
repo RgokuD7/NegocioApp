@@ -213,7 +213,7 @@ export function registerIpcHandlers(ipcMain, db) {
       validateString(name, "nombre de grupo");
 
       const result = statements.insertGroup.run(name.trim(), price);
-      return { id: result.lastInsertRowid, name: name.trim() };
+      return { id: result.lastInsertRowid, name: name.trim(), price };
     } catch (error) {
       handleDatabaseError(
         error,
@@ -221,6 +221,32 @@ export function registerIpcHandlers(ipcMain, db) {
         "UNIQUE constraint failed",
         "Ya existe un grupo con este nombre"
       );
+    }
+  });
+  ipcMain.handle("update-group", async (_, id, name, price) => {
+    try {
+      validateId(id, "grupo");
+      validateString(name, "nombre de grupo");
+      validateNumber(price, "precio del grupo");
+      statements.updateGroup.run(name.trim(), price, id);
+      return { id, name: name.trim(), price };
+    } catch (error) {
+      handleDatabaseError(
+        error,
+        "actualizar grupo",
+        "UNIQUE constraint failed",
+        "Ya existe un grupo con este nombre"
+      );
+    }
+  });
+  ipcMain.handle("delete-group", async (_, id) => {
+    try {
+      validateId(id, "grupo");
+      statements.deleteGroupById.run(id);
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      throw new Error(`Error al eliminar grupo: ${error.message}`);
     }
   });
 
@@ -253,7 +279,11 @@ export function registerIpcHandlers(ipcMain, db) {
       validateString(barcode, "código de barras");
 
       const result = statements.insertBarcode.run(productId, barcode.trim());
-      return { id: result.lastInsertRowid, productId, barcode: barcode.trim() };
+      return {
+        id: result.lastInsertRowid,
+        productId,
+        barcode: parseInt(barcode),
+      };
     } catch (error) {
       handleDatabaseError(
         error,
@@ -973,7 +1003,7 @@ function prepareStatements(db) {
     `),
     updateGroup: db.prepare(`
       UPDATE groups 
-      SET name = ? 
+      SET name = ? , price = ?
       WHERE id = ?
     `),
     deleteGroupById: db.prepare(`

@@ -69,7 +69,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   return (
     <input
-      ref={inputRef} // <-- Ahora la ref apunta directamente al input
+      ref={inputRef} 
       type="text"
       name={name}
       value={displayValue}
