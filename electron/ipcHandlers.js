@@ -165,6 +165,27 @@ export function registerIpcHandlers(ipcMain, db) {
       return { success: false, message: error.message };
     }
   });
+  ipcMain.handle("select-file", async (_) => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: "Selecciona un archivo",
+        properties: ["openFile"],
+        filters: [
+          { name: "Archivos JSON", extensions: ["json"] },
+          { name: "Archivos SQL", extensions: ["sql"] },
+        ],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return null; // el usuario canceló
+      }
+
+      return result.filePaths[0];
+    } catch (error) {
+      console.error("Error al seleccionar archivo:", error);
+      return null;
+    }
+  });
 
   // Seleccionar la ruta para guardar un archivo
   ipcMain.handle("select-save-path", async (_) => {
