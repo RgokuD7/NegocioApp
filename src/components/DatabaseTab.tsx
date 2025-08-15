@@ -23,6 +23,25 @@ const DatabaseTab = () => {
     }
   };
 
+  const handleJsonExport = async () => {
+    try {
+      const savePath = await window.electron.system.selectSavePath(); // Ajusta el nombre de la función exportData
+
+      if (!savePath) {
+        setExportStatus("No se seleccionó ninguna ruta.");
+        return;
+      }
+      console.log(savePath);
+      const result = await window.electron.database.exportProductsJson(
+        savePath
+      ); // Llama a la función de exportación
+      setExportStatus(result.message);
+    } catch (error) {
+      setExportStatus("Error al exportar los datos.");
+      console.error("Error exportando los datos:", error);
+    }
+  };
+
   const handleImport = async () => {
     try {
       const filepath = await window.electron.system.selectFile(); // Llama a la función de selección de archivo
@@ -42,6 +61,12 @@ const DatabaseTab = () => {
   return (
     <div className="w-2/3 bg-[#8FC1B5] p-6 flex flex-col justify-end">
       <div className="grid gap-4">
+        <button
+          onClick={handleJsonExport}
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">
+          <Download size={20} />
+          Exportar productos (JSON)
+        </button>
         <button
           onClick={handleExport}
           className="flex items-center justify-center gap-2 px-4 py-3 bg-[#007566] text-white rounded-lg hover:bg-[#006557]">

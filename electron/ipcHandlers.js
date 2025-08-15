@@ -17,7 +17,7 @@ export function registerIpcHandlers(ipcMain, db) {
       if (fileExtension === "sql") {
         return importFromSQL(filePath, db);
       } else if (fileExtension === "json") {
-        return importFromJSON(filePath, db);
+        return importProductsFromJSON(filePath, db);
       } else {
         throw new Error(
           "Tipo de archivo no soportado. Solo se permiten SQL o JSON."
@@ -48,52 +48,60 @@ export function registerIpcHandlers(ipcMain, db) {
       throw new Error(`Error al importar datos desde SQL: ${error.message}`);
     }
   }
-  const fs = require("fs");
 
   /**
-   * Importa productos desde un archivo JSON
+   * Importa productos y tablas relacionadas desde un JSON exportado
    * @param {string} filePath - Ruta del archivo JSON
-   * @param {object} db - Conexión SQLite
+   * @param {object} db - Instancia de better-sqlite3
    */
   function importProductsFromJSON(filePath, db) {
     try {
       const contenido = fs.readFileSync(filePath, "utf-8");
-      const productos = JSON.parse(contenido);
+      const data = JSON.parse(contenido);
 
-      // Preparar statement usando INSERT OR REPLACE para manejar duplicados por nombre
-      const stmt = db.prepare(`
-      INSERT OR REPLACE INTO products
-      (id, name, category_id, group_id, price, unit_id, quick_access, keyboard_shortcut, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
-    `);
+      const tables = [
+        "categories",
+        "groups",
+        "units",
+        "products",
+        "barcodes",
+        "suppliers",
+        "suppliers_codes",
+      ];
 
-      db.serialize(() => {
-        productos.forEach((p) => {
-          stmt.run(
-            p.id || null, // si no hay id, SQLite genera uno nuevo
-            p.name,
-            p.category_id || null,
-            p.group_id || null,
-            p.price || 0,
-            p.unit_id || null,
-            p.quick_access ? 1 : 0,
-            p.keyboard_shortcut || null,
-            p.created_at || null
-          );
+      tables.forEach((table) => {
+        const rows = data[table];
+        if (!rows || rows.length === 0) return;
+
+        // Obtener columnas del primer registro
+        const columns = Object.keys(rows[0]);
+        const placeholders = columns.map(() => "?").join(",");
+
+        // Preparar INSERT OR REPLACE para mantener los id originales
+        const stmt = db.prepare(
+          `INSERT OR REPLACE INTO ${table} (${columns.join(
+            ","
+          )}) VALUES (${placeholders})`
+        );
+
+        // Ejecutar en transacción
+        const insertMany = db.transaction((rows) => {
+          rows.forEach((row) => {
+            stmt.run(Object.values(row));
+          });
         });
+
+        insertMany(rows);
       });
 
-      stmt.finalize();
-
+      console.log("Importación de productos y tablas relacionadas completada.");
       return {
         success: true,
-        message: "Productos importados correctamente desde JSON.",
+        message: "Datos importados correctamente desde JSON.",
       };
     } catch (error) {
       console.error("Error importando productos desde JSON:", error);
-      throw new Error(
-        `Error al importar productos desde JSON: ${error.message}`
-      );
+      return { success: false, message: error.message };
     }
   }
 
@@ -120,28 +128,34 @@ export function registerIpcHandlers(ipcMain, db) {
     }
   });
 
-  // -------------------------
-  // Exportación solo de productos a JSON
-  // -------------------------
+  /**
+   * Exporta productos y tablas relacionadas a JSON
+   */
   ipcMain.handle("export-products-json", async (_, savePath) => {
     try {
-      if (!savePath) {
-        throw new Error("Ruta de guardado no proporcionada.");
-      }
+      if (!savePath) throw new Error("Ruta de guardado no proporcionada.");
 
-      const productos = [];
-      db.all("SELECT id, nombre, precio FROM productos", [], (err, rows) => {
-        if (err) {
-          throw new Error(`Error leyendo productos: ${err.message}`);
-        }
-        rows.forEach((row) => productos.push(row));
+      const exportData = {};
 
-        // Guardar en JSON
-        const jsonPath = savePath + ".json";
-        fs.writeFileSync(jsonPath, JSON.stringify(productos, null, 2), "utf-8");
-        console.log("Productos exportados correctamente a JSON.");
+      const tables = [
+        "categories",
+        "groups",
+        "units",
+        "products",
+        "barcodes",
+        "suppliers",
+        "suppliers_codes",
+      ];
+
+      tables.forEach((table) => {
+        const rows = db.prepare(`SELECT * FROM ${table}`).all();
+        exportData[table] = rows;
       });
 
+      const jsonPath = savePath + ".json";
+      fs.writeFileSync(jsonPath, JSON.stringify(exportData, null, 2), "utf-8");
+
+      console.log("Exportación a JSON completada.");
       return {
         success: true,
         message: "Productos exportados a JSON con éxito.",
@@ -150,18 +164,6 @@ export function registerIpcHandlers(ipcMain, db) {
       console.error("Error al exportar productos:", error);
       return { success: false, message: error.message };
     }
-  });
-  // Abrir el diálogo para seleccionar un archivo
-  ipcMain.handle("select-file", async (_) => {
-    const result = await dialog.showOpenDialog({
-      properties: ["openFile"],
-      filters: [
-        { name: "Archivos SQL", extensions: ["sql"] },
-        { name: "Archivos JSON", extensions: ["json"] },
-      ],
-    });
-
-    return result.filePaths[0]; // Devuelve la ruta del primer archivo seleccionado
   });
 
   // Seleccionar la ruta para guardar un archivo
