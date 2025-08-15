@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld("electron", {
     importData: (filePath) => ipcRenderer.invoke("import-data", filePath),
     // Exportar datos a SQL
     exportData: (savePath) => ipcRenderer.invoke("export-data", savePath),
-
+    exportProductsJson: (savePath) => ipcRenderer.invoke("export-products-json", savePath),
     // Categorías
     getCategories: () => ipcRenderer.invoke("get-categories"), // Obtener todas las categorías
     addCategory: (name) => ipcRenderer.invoke("add-category", name), // Añadir una nueva categoría

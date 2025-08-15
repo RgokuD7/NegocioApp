@@ -7,6 +7,7 @@ declare global {
       database: {
         importData: (filePath: string) => Promise<{ message: string }>; // Función para importar datos desde un archivo
         exportData: (savePath: string) => Promise<{ message: string }>; // Función para exportar datos a un archivo
+        exportProductsJson: (savePath: string) => Promise<{ message: string }>; // Función para exportar productos a un archivo JSON
         getCategories: () => Promise<Category[]>; // Obtiene las categorías
         addCategory: (name: string) => Promise<Category>; // Agrega una categoría
         getGroups: () => Promise<Group[]>; // Obtiene los grupos

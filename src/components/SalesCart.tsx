@@ -151,13 +151,21 @@ const SalesCart: React.FC<SalesCartProps> = ({
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     //const isOnlyNumbers = (str: string) => /^\d+$/.test(str);
-
-    if (processedQuery) {
+    if (processedQuery[0] === "_") {
+      console.log(processedQuery);
+      const matchedId = products.find(
+        (p) => p.id === parseInt(processedQuery.slice(1))
+      );
+      if (matchedId) {
+        handleSelectProduct(matchedId);
+        setIsSearchResultsOpen(false);
+      }
+      return;
+    } else if (processedQuery) {
       // Buscar coincidencia con codigos de barra
       const matchedBarcode = barcodes.find(
         (b) => b.barcode === parseInt(processedQuery)
       );
-      const matchedId = products.find((p) => p.id === parseInt(processedQuery));
       if (matchedBarcode) {
         const foundProduct = products.find(
           (p) => p.id === matchedBarcode.product_id
@@ -172,9 +180,6 @@ const SalesCart: React.FC<SalesCartProps> = ({
           price: parseInt(processedQuery),
           quantity: quantityInput,
         });
-      } else if (matchedId) {
-        handleSelectProduct(matchedId);
-        setIsSearchResultsOpen(false);
       } else if (filteredProducts.length == 1) {
         handleSelectProduct(filteredProducts[0]);
       } else if (filteredProducts.length == 0) {

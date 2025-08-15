@@ -138,7 +138,7 @@ function App() {
                 {quickAccessProducts.map((product) => (
                   <button
                     key={product.id}
-                    onClick={() => setShortcutPress(product.id.toString())}
+                    onClick={() => setShortcutPress('_' + product.id.toString())}
                     className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
                     <span className="font-medium">{product.name}</span>
                     <span className="text-sm opacity-70">{product.id}</span>

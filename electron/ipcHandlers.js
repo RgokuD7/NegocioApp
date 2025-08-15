@@ -8,15 +8,20 @@ export function registerIpcHandlers(ipcMain, db) {
   // Preparar statements una sola vez para reutilización
   const statements = prepareStatements(db);
 
-  // Manejador para importar datos (CSV o SQL)
+  // Manejador para importar datos (SQL o JSON)
   ipcMain.handle("import-data", async (_, filePath) => {
     try {
       const fileExtension = filePath.split(".").pop().toLowerCase();
+
       // Verificar la extensión del archivo
       if (fileExtension === "sql") {
         return importFromSQL(filePath, db);
+      } else if (fileExtension === "json") {
+        return importFromJSON(filePath, db);
       } else {
-        throw new Error("Tipo de archivo no soportado.");
+        throw new Error(
+          "Tipo de archivo no soportado. Solo se permiten SQL o JSON."
+        );
       }
     } catch (error) {
       console.error("Error importing data:", error);
@@ -43,6 +48,54 @@ export function registerIpcHandlers(ipcMain, db) {
       throw new Error(`Error al importar datos desde SQL: ${error.message}`);
     }
   }
+  const fs = require("fs");
+
+  /**
+   * Importa productos desde un archivo JSON
+   * @param {string} filePath - Ruta del archivo JSON
+   * @param {object} db - Conexión SQLite
+   */
+  function importProductsFromJSON(filePath, db) {
+    try {
+      const contenido = fs.readFileSync(filePath, "utf-8");
+      const productos = JSON.parse(contenido);
+
+      // Preparar statement usando INSERT OR REPLACE para manejar duplicados por nombre
+      const stmt = db.prepare(`
+      INSERT OR REPLACE INTO products
+      (id, name, category_id, group_id, price, unit_id, quick_access, keyboard_shortcut, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
+    `);
+
+      db.serialize(() => {
+        productos.forEach((p) => {
+          stmt.run(
+            p.id || null, // si no hay id, SQLite genera uno nuevo
+            p.name,
+            p.category_id || null,
+            p.group_id || null,
+            p.price || 0,
+            p.unit_id || null,
+            p.quick_access ? 1 : 0,
+            p.keyboard_shortcut || null,
+            p.created_at || null
+          );
+        });
+      });
+
+      stmt.finalize();
+
+      return {
+        success: true,
+        message: "Productos importados correctamente desde JSON.",
+      };
+    } catch (error) {
+      console.error("Error importando productos desde JSON:", error);
+      throw new Error(
+        `Error al importar productos desde JSON: ${error.message}`
+      );
+    }
+  }
 
   // Manejador para exportar datos
   ipcMain.handle("export-data", async (_, savePath) => {
@@ -55,13 +108,10 @@ export function registerIpcHandlers(ipcMain, db) {
       // Leer la base de datos como archivo binario
       const databaseBuffer = fs.readFileSync(dbPath);
 
-      const sql_path = savePath + ".sql";
       const sqlite_path = savePath + ".sqlite";
 
       // Guardar ese contenido en la ruta seleccionada
       fs.writeFileSync(sqlite_path, databaseBuffer);
-
-      exportToSQL(sql_path, dbPath);
 
       return { success: true, message: "Base de datos exportada con éxito." };
     } catch (error) {
@@ -70,30 +120,44 @@ export function registerIpcHandlers(ipcMain, db) {
     }
   });
 
-  // Función para exportar la base de datos a un archivo SQL
-  async function exportToSQL(outputPath, dbPath) {
-    return new Promise((resolve, reject) => {
-      const dumpCommand = `sqlite3 "${dbPath}" .dump > "${outputPath}"`;
+  // -------------------------
+  // Exportación solo de productos a JSON
+  // -------------------------
+  ipcMain.handle("export-products-json", async (_, savePath) => {
+    try {
+      if (!savePath) {
+        throw new Error("Ruta de guardado no proporcionada.");
+      }
 
-      exec(dumpCommand, (error, stdout, stderr) => {
-        if (error) {
-          console.error("Error al exportar la base de datos:", error);
-          reject(error);
-        } else {
-          console.log("Base de datos exportada correctamente.");
-          resolve(true);
+      const productos = [];
+      db.all("SELECT id, nombre, precio FROM productos", [], (err, rows) => {
+        if (err) {
+          throw new Error(`Error leyendo productos: ${err.message}`);
         }
-      });
-    });
-  }
+        rows.forEach((row) => productos.push(row));
 
+        // Guardar en JSON
+        const jsonPath = savePath + ".json";
+        fs.writeFileSync(jsonPath, JSON.stringify(productos, null, 2), "utf-8");
+        console.log("Productos exportados correctamente a JSON.");
+      });
+
+      return {
+        success: true,
+        message: "Productos exportados a JSON con éxito.",
+      };
+    } catch (error) {
+      console.error("Error al exportar productos:", error);
+      return { success: false, message: error.message };
+    }
+  });
   // Abrir el diálogo para seleccionar un archivo
   ipcMain.handle("select-file", async (_) => {
     const result = await dialog.showOpenDialog({
       properties: ["openFile"],
       filters: [
-        { name: "Archivos SQL", extensions: ["sql"] } /* 
-        { name: "Archivos CSV", extensions: ["csv"] }, */,
+        { name: "Archivos SQL", extensions: ["sql"] },
+        { name: "Archivos JSON", extensions: ["json"] },
       ],
     });
 

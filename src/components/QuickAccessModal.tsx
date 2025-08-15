@@ -29,7 +29,7 @@ const QuickAccessModal: React.FC<QuickAccessModalProps> = ({
     } catch (error) {
       console.error("Error cargando datos:", error);
       window.electron.dialog.showError(
-        "Error al cargar las categorías y grupos"
+        "Error al cargar"
       );
     }
   };
