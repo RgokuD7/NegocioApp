@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { X, CheckCircle, AlertTriangle } from "lucide-react";
 import useGlobalKeyPress from "../hooks/useGlobalKeyPress";
 
-
 interface AlertModalProps {
   isOpen: boolean;
   alertType: "error" | "success";
@@ -23,8 +22,6 @@ const AlertModal: React.FC<AlertModalProps> = ({
   const bgColor = alertType === "error" ? "bg-red-50" : "bg-green-50";
   const borderColor =
     alertType === "error" ? "border-red-200" : "border-green-200";
-
-
 
   useGlobalKeyPress("Escape", () => {
     if (isOpen) {
@@ -73,6 +70,7 @@ const AlertModal: React.FC<AlertModalProps> = ({
           <div className="mt-4 flex justify-end">
             <button
               onClick={onClose}
+              autoFocus
               className={`px-3 py-1.5 text-sm rounded-md ${
                 alertType === "error"
                   ? "bg-red-100 text-red-700 hover:bg-red-200"

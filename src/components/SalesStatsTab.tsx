@@ -11,6 +11,7 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Product, Sale, Unit } from "../types";
 import { useDateRange } from "../context/DateRangeContext";
+import { startOfDay, endOfDay } from "date-fns";
 
 import { es } from "date-fns/locale/es";
 import {
@@ -61,10 +62,11 @@ const SalesStatsTab = () => {
 
   const fetchSales = async () => {
     try {
-      const startOfDayLocal = startDate;
-      startOfDayLocal!.setHours(0, 0, 0, 0);
-      const endOfDayLocal = endDate;
-      endOfDayLocal!.setHours(23, 59, 59, 999);
+      const startOfDayLocal = startOfDay(startDate!);
+      const endOfDayLocal = endOfDay(endDate!);
+
+      console.log("inicio", startOfDayLocal!.toISOString());
+      console.log("fin", endOfDayLocal!.toISOString());
 
       console.log("inicio", startOfDayLocal!.toISOString());
       console.log("fin", endOfDayLocal!.toISOString());
@@ -151,6 +153,14 @@ const SalesStatsTab = () => {
               dateFormat="dd/MM/yyyy"
               placeholderText="Seleccionar fechas"
             />
+            <button
+              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag"
+              onClick={() => {
+                const today = new Date();
+                setDateRange([today, today]);
+              }}>
+              HOY
+            </button>
           </div>
         </div>
 
@@ -250,5 +260,3 @@ const SalesStatsTab = () => {
     </div>
   );
 };
-
-export default SalesStatsTab;

@@ -5,6 +5,7 @@ import { Calendar, ChevronDown } from "lucide-react";
 import { Product, Sale, Unit } from "../types";
 import { useDateRange } from "../context/DateRangeContext";
 import { AnimatePresence, motion } from "framer-motion";
+import { startOfDay, endOfDay } from "date-fns";
 
 import { es } from "date-fns/locale/es";
 import {
@@ -53,10 +54,9 @@ const DailySalesTab = () => {
 
   const fetchSales = async () => {
     try {
-      const startOfDayLocal = startDate;
-      startOfDayLocal!.setHours(0, 0, 0, 0);
-      const endOfDayLocal = endDate;
-      endOfDayLocal!.setHours(23, 59, 59, 999);
+      console.log("Fetching sales for range:", startDate, endDate);
+      const startOfDayLocal = startOfDay(startDate!);
+      const endOfDayLocal = endOfDay(endDate!);
 
       console.log("inicio", startOfDayLocal!.toISOString());
       console.log("fin", endOfDayLocal!.toISOString());
@@ -78,8 +78,9 @@ const DailySalesTab = () => {
         };
       });
 
-      setSales(adjustedSales);
       console.log(adjustedSales);
+
+      setSales(adjustedSales);
     } catch (error) {
       console.error("Error al obtener ventas:", error);
       // Opcional: Mostrar notificación al usuario
@@ -123,6 +124,14 @@ const DailySalesTab = () => {
               dateFormat="dd/MM/yyyy"
               placeholderText="Seleccionar fechas"
             />
+            <button
+              className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag"
+              onClick={() => {
+                const today = new Date();
+                setDateRange([today, today]);
+              }}>
+              HOY
+            </button>
           </div>
         </div>
 
@@ -151,9 +160,7 @@ const DailySalesTab = () => {
               className="bg-white/10 p-4 rounded-lg space-y-2"
               onClick={() => toggleSale(sale.id)}>
               <div className="flex text-white justify-between items-start">
-                <span className="font-medium">
-                  {formatRelativeDate(sale.created_at)}
-                </span>
+                <span className="font-medium">{sale.created_at}</span>
                 <span className="text-lg font-semibold">
                   {formatCurrencyChile(sale.total)}
                 </span>

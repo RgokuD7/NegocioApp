@@ -77,6 +77,12 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const handleBlur = () => {
+    setTimeout(() => {
+      focusSearchInput();
+    }, 1000);
+  };
+
   const focusSearchInput = () => {
     if (searchInputRef.current) {
       console.log("Focusing search input");
@@ -390,6 +396,8 @@ const SalesCart: React.FC<SalesCartProps> = ({
             ref={searchInputRef}
             type="text"
             placeholder="Buscar por nombre o código..."
+            autoFocus
+            onBlur={handleBlur}
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyDown={handleInputKeyPress}
