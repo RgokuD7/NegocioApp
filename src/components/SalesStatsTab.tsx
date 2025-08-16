@@ -260,3 +260,5 @@ const SalesStatsTab = () => {
     </div>
   );
 };
+
+export default SalesStatsTab;
