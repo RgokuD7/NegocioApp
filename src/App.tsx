@@ -16,24 +16,8 @@ import SalesStatsTab from "./components/SalesStatsTab";
 import { DateRangeProvider } from "./context/DateRangeContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { formatCurrencyChile } from "./utils/utils";
-
-/* function useGlobalKeyPress(targetKey: string, callback: () => void) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === targetKey) {
-        callback();
-      }
-    };
-
-    // Agregar el event listener al montar el componente
-    window.addEventListener("keydown", handleKeyDown);
-
-    // Limpiar el event listener al desmontar
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [targetKey, callback]);
-} */
+import useGlobalKeyPress from "./hooks/useGlobalKeyPress";
+import { set } from "date-fns";
 
 const useKeyboardShortcuts = (
   quickAccessProducts: any[],
@@ -95,6 +79,12 @@ function App() {
     }
   };
 
+  /*   useGlobalKeyPress("Escape", () => {
+    if (isMenuOpen) {
+      setIsMenuOpen(false);
+    }
+  });
+   */
   useKeyboardShortcuts(quickAccessProducts, setShortcutPress);
 
   // Lógica para cambiar la sección derecha basada en la opción seleccionada
@@ -138,7 +128,9 @@ function App() {
                 {quickAccessProducts.map((product) => (
                   <button
                     key={product.id}
-                    onClick={() => setShortcutPress('_' + product.id.toString())}
+                    onClick={() =>
+                      setShortcutPress("_" + product.id.toString())
+                    }
                     className="bg-white/10 text-white p-3 rounded-lg hover:bg-white/20 transition-colors duration-200 flex flex-col items-center justify-center no-drag">
                     <span className="font-medium">{product.name}</span>
                     <span className="text-sm opacity-70">{product.id}</span>

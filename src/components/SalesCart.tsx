@@ -95,14 +95,15 @@ const SalesCart: React.FC<SalesCartProps> = ({
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
     if (isOpen) {
       focusSearchInput();
+      loadData();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    updateSelectedProducts();
+  }, [products]);
 
   useEffect(() => {
     if (typeof shorcutData === "string" && shorcutData.trim() !== "") {
@@ -130,9 +131,10 @@ const SalesCart: React.FC<SalesCartProps> = ({
     setTotalSale(total);
     focusSearchInput();
     setIsSearchResultsOpen(false);
-  }, [selectedProducts]);
+  }, [selectedProducts, isOpen]);
 
   const loadData = async () => {
+    console.log("dataloaded");
     try {
       const [productsData, barcodesData, unitsData] = await Promise.all([
         window.electron.database.getProducts(),
@@ -244,6 +246,19 @@ const SalesCart: React.FC<SalesCartProps> = ({
       );
     }
     setFocusElement(-1);
+  };
+
+  // products: lista de productos actualizados (del catálogo)
+  // selectedProducts: tu estado actual del carrito
+  const updateSelectedProducts = () => {
+    setSelectedProducts((prev) =>
+      prev.map((item) => {
+        const updatedProduct = products.find((p) => p.id === item.product.id);
+        return updatedProduct
+          ? { ...item, product: updatedProduct } // reemplaza por el producto actualizado
+          : item; // si no lo encuentra, deja el mismo
+      })
+    );
   };
 
   const getUnitById = (id: number) => {
