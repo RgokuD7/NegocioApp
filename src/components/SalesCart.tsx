@@ -78,6 +78,14 @@ const SalesCart: React.FC<SalesCartProps> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleBlur = () => {
+    if (
+      isSearchResultsOpen ||
+      isProvisionalProductModalOpen ||
+      isPaymentModalOpen ||
+      isProductNotFoundModalOpen ||
+      alert.show
+    )
+      return;
     setTimeout(() => {
       focusSearchInput();
     }, 1000);
