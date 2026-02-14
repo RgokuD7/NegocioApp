@@ -23,6 +23,7 @@ registerLocale("es", es);
 
 interface ProductStat {
   product?: Product;
+  productName?: string;
   quantity: number;
   total: number;
 }
@@ -107,7 +108,9 @@ const SalesStatsTab = () => {
   sales.forEach((sale) => {
     sale.items.forEach((item) => {
       const existingStat = productStats.find(
-        (stat) => stat.product?.id === item.id
+        (stat) =>
+          stat.product?.id === item.product_id ||
+          stat.productName === item.product_name
       );
       if (existingStat) {
         existingStat.quantity += item.quantity;
@@ -115,6 +118,7 @@ const SalesStatsTab = () => {
       } else {
         productStats.push({
           product: getProductWithId(item.product_id ?? 0),
+          productName: item.product_name,
           quantity: item.quantity,
           total: item.subtotal,
         });
@@ -222,12 +226,13 @@ const SalesStatsTab = () => {
                   </span>
                   <div className="flex-1">
                     <p className="font-medium">
-                      {stat.product?.name ?? "Producto Temporal"}
+                      {stat.productName ||
+                        stat.product?.name ||
+                        "Producto Temporal"}
                     </p>
                     <p className="text-sm text-white/70">
-                      {`${stat.quantity} ${
-                        stat.quantity > 1 ? "unidades" : "unidad"
-                      }`}
+                      {`${stat.quantity} ${stat.quantity > 1 ? "unidades" : "unidad"
+                        }`}
                     </p>
                   </div>
                 </div>
@@ -245,7 +250,9 @@ const SalesStatsTab = () => {
                   </span>
                   <div className="flex-1">
                     <p className="font-medium">
-                      {stat.product?.name ?? "Producto Temporal"}
+                      {stat.productName ||
+                        stat.product?.name ||
+                        "Producto Temporal"}
                     </p>
                     <p className="text-sm text-white/70">
                       {formatCurrencyChile(stat.total)}

@@ -28,10 +28,10 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       setFocusPaymentInput(true);
     }
     const total = cartItems.reduce(
-      (sum, sl) => sum + roundToNearestTen(sl.product.price * sl.quantity),
+      (sum, sl) => sum + sl.product.price * sl.quantity,
       0
     );
-    setTotalSale(total);
+    setTotalSale(roundToNearestTen(total));
   }, [isOpen]);
 
   useGlobalKeyPress("Escape", () => {
@@ -71,14 +71,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
       const saleId = await window.electron.database.addSale(sale);
 
       for (const cartItem of cartItems) {
-        const subTotal = roundToNearestTen(
-          cartItem.quantity * cartItem.product.price
-        );
+        const subTotal =
+          cartItem.quantity * cartItem.product.price;
 
         const saleItem: SaleItem = {
           id: 0, // Auto-generado
           sale_id: saleId,
           product_id: cartItem.product.id > 0 ? cartItem.product.id : null,
+          product_name: cartItem.product.name,
           quantity: cartItem.quantity,
           price: cartItem.product.price,
           subtotal: subTotal,
@@ -142,9 +142,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               Vuelto
             </label>
             <div
-              className={`text-3xl font-bold ${
-                change >= 0 ? "text-green-600" : "text-red-600"
-              }`}>
+              className={`text-3xl font-bold ${change >= 0 ? "text-green-600" : "text-red-600"
+                }`}>
               {formatCurrencyChile(change)}
             </div>
           </div>

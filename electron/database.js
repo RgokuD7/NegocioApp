@@ -151,6 +151,7 @@ function createTables(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sale_id INTEGER NOT NULL,
       product_id INTEGER,
+      product_name TEXT, 
       quantity REAL NOT NULL,
       price INTEGER NOT NULL,
       subtotal INTEGER NOT NULL,
@@ -264,9 +265,18 @@ function createTables(db) {
 `);
 
     db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_sale_items_product_id
-  ON sale_items (product_id);
-`);
+          CREATE INDEX IF NOT EXISTS idx_sale_items_product_id
+          ON sale_items (product_id);
+    `);
+
+    // Migración para añadir product_name si no existe
+    const columns = db.prepare("PRAGMA table_info(sale_items)").all();
+    const hasProductName = columns.some((col) => col.name === "product_name");
+
+    if (!hasProductName) {
+      db.exec("ALTER TABLE sale_items ADD COLUMN product_name TEXT");
+      console.log("Columna product_name añadida a sale_items");
+    }
 
     // Índices para la tabla de códigos de proveedores
     db.exec(`

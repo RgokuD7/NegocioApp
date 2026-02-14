@@ -165,9 +165,8 @@ const DailySalesTab = () => {
                   {formatCurrencyChile(sale.total)}
                 </span>
                 <ChevronDown
-                  className={`transform transition-transform ${
-                    expandedSaleIds.includes(sale.id) ? "rotate-180" : ""
-                  }`}
+                  className={`transform transition-transform ${expandedSaleIds.includes(sale.id) ? "rotate-180" : ""
+                    }`}
                   size={20}
                 />
               </div>
@@ -190,16 +189,16 @@ const DailySalesTab = () => {
                         <span>
                           {item.quantity}
                           {" x "}
-                          {getProductWithId(item.product_id ?? 0)?.name ??
+                          {item.product_name ||
+                            getProductWithId(item.product_id ?? 0)?.name ||
                             "Producto Temporal"}
-                          {` (${formatCurrencyChile(item.price)}${
-                            getProductWithId(item.product_id ?? 0)?.unit_id
+                          {` (${formatCurrencyChile(item.price)}${getProductWithId(item.product_id ?? 0)?.unit_id
                               ? getUnitById(
-                                  getProductWithId(item.product_id ?? 0)
-                                    ?.unit_id ?? 0
-                                )?.price_unit || ""
+                                getProductWithId(item.product_id ?? 0)
+                                  ?.unit_id ?? 0
+                              )?.price_unit || ""
                               : ""
-                          })`}
+                            })`}
                         </span>
                         <span>{formatCurrencyChile(item.subtotal)}</span>
                       </div>

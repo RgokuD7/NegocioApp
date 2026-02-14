@@ -133,12 +133,13 @@ const SalesCart: React.FC<SalesCartProps> = ({
 
   useEffect(() => {
     const total = selectedProducts.reduce(
-      (sum, sl) => sum + roundToNearestTen(sl.quantity * sl.product.price),
+      (sum, sl) => sum + sl.quantity * sl.product.price,
       0
     );
-    setTotalSale(total);
+    setTotalSale(roundToNearestTen(total));
     focusSearchInput();
     setIsSearchResultsOpen(false);
+    if (selectedProducts.length > 0) setChange(0);
   }, [selectedProducts, isOpen]);
 
   const loadData = async () => {
@@ -178,36 +179,42 @@ const SalesCart: React.FC<SalesCartProps> = ({
       }
       return;
     } else if (processedQuery) {
-      // Buscar coincidencia con codigos de barra
-      const matchedBarcode = barcodes.find(
-        (b) => b.barcode === parseInt(processedQuery)
-      );
-      if (matchedBarcode) {
-        const foundProduct = products.find(
-          (p) => p.id === matchedBarcode.product_id
-        );
-        if (foundProduct) {
-          handleSelectProduct(foundProduct);
-          setIsSearchResultsOpen(false);
-        }
-      } else if (parseInt(processedQuery) < 50000) {
+      const numericVal = parseInt(processedQuery);
+      const isStrictNumber = /^\d+$/.test(processedQuery);
+
+      if (isStrictNumber && numericVal < 50000) {
         handleAddProvisionalProduct({
           name: `Producto provisional ${Math.abs(provisionalId)}`,
-          price: parseInt(processedQuery),
+          price: numericVal,
           quantity: quantityInput,
         });
-      } else if (filteredProducts.length == 1) {
-        handleSelectProduct(filteredProducts[0]);
-      } else if (filteredProducts.length == 0) {
-        setIsProductNotFoundModalOpen(true);
-        return;
       } else {
-        setIsSearchResultsOpen(true);
+        // Buscar coincidencia con codigos de barra
+        const matchedBarcode = barcodes.find(
+          (b) => b.barcode === numericVal
+        );
+
+        if (matchedBarcode) {
+          const foundProduct = products.find(
+            (p) => p.id === matchedBarcode.product_id
+          );
+          if (foundProduct) {
+            handleSelectProduct(foundProduct);
+            setIsSearchResultsOpen(false);
+          }
+        } else if (filteredProducts.length == 1) {
+          handleSelectProduct(filteredProducts[0]);
+        } else if (filteredProducts.length == 0) {
+          setIsProductNotFoundModalOpen(true);
+          return;
+        } else {
+          setIsSearchResultsOpen(true);
+          return; // Mantener abierto si hay múltiples resultados
+        }
       }
       setIsSearchResultsOpen(false);
       setSearchQuery("");
       setQuantityInput(1);
-      //if (onShortcutAdded) onShortcutAdded();
     }
   };
 
@@ -375,7 +382,7 @@ const SalesCart: React.FC<SalesCartProps> = ({
                     <h3 className="font-medium text-lg text-[#007566]">
                       TOTAL:{" "}
                       {formatCurrencyChile(
-                        roundToNearestTen(sp.quantity * sp.product.price)
+                        sp.quantity * sp.product.price
                       )}
                     </h3>
                   </div>
@@ -466,18 +473,13 @@ const SalesCart: React.FC<SalesCartProps> = ({
             setSelectedProducts([]);
             setProvisionalId(-1);
             focusSearchInput();
-            setAlert({
-              show: true,
-              type: "success",
-              message: "Venta generada con exito",
-              duration: 300,
-            });
+            // No success alert needed as per user request
           } else
             setAlert({
               show: true,
               type: "error",
               message: `Error al agregar compra`,
-              duration: 1000,
+              duration: 2000,
             });
         }}
         cartItems={selectedProducts}
@@ -491,6 +493,14 @@ const SalesCart: React.FC<SalesCartProps> = ({
           setSearchQuery("");
         }}
         onAdd={handleAddProvisionalProduct}
+      />
+
+      <AlertModal
+        isOpen={alert.show}
+        onClose={() => setAlert({ ...alert, show: false })}
+        alertType={alert.type}
+        message={alert.message}
+        duration={alert.duration}
       />
     </div>
   );

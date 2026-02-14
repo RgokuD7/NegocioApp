@@ -939,9 +939,41 @@ export function registerIpcHandlers(ipcMain, db) {
       validateNumber(saleItem.quantity, "cantidad");
       validateNumber(saleItem.price, "precio");
       validateNumber(saleItem.subtotal, "subtotal");
-      const result = statements.insertSaleItem.run(
+
+      // Obtener el nombre del producto si existe
+      let productName = "Producto desconocido";
+      if (saleItem.product_id) {
+          try {
+             const product = statements.getAllProducts.get(saleItem.product_id); // Reutilizando query existente, aunque trae todo
+             if (product) productName = product.name;
+          } catch(e) {
+              console.log("Error fetching product name for snapshot", e);
+          }
+      } else {
+          // Si es un producto provisional (ID negativo o nulo), el nombre debería venir en saleItem o generarse
+          // Actualmente saleItem no trae nombre desde el frontend en add-sale-item segun types, pero podemos inferirlo o cambiar el frontend
+          // Revisando PaymentModal.tsx, se envia solo esto:
+          /*
+            const saleItem: SaleItem = {
+              id: 0, 
+              sale_id: saleId,
+              product_id: cartItem.product.id > 0 ? cartItem.product.id : null,
+              quantity: cartItem.quantity,
+              price: cartItem.product.price,
+              subtotal: subTotal,
+            };
+          */
+         // Necesitamos que el frontend mande el nombre para productos provisionales.
+         // Por ahora, dejaré un placeholder si no logramos resolver el nombre.
+      }
+
+      const result = db.prepare(`
+        INSERT INTO sale_items (sale_id, product_id, product_name, quantity, price, subtotal)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
         saleItem.sale_id,
         saleItem.product_id,
+        saleItem.product_name || productName, // Preferir el que venga del front si modificamos el front
         saleItem.quantity,
         saleItem.price,
         saleItem.subtotal
